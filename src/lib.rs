@@ -28,13 +28,13 @@ impl Config {
 
         let stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
         let img_filename = matches.value_of("IMG_FILE").unwrap().to_string();
-        
+
         Config {stl_filename, img_filename}
     }
 }
 
-pub fn run(config: Config) -> Result<(), Box<Error>> {
-    let mut stl_file = File::open(config.stl_filename)?;
+pub fn run(config: &Config) -> Result<(), Box<Error>> {
+    let mut stl_file = File::open(&config.stl_filename)?;
     let stl = stl_io::read_stl(&mut stl_file)?;
 
     println!("{:?}", stl);
@@ -42,3 +42,34 @@ pub fn run(config: Config) -> Result<(), Box<Error>> {
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::io::ErrorKind;
+    use super::*;
+
+    #[test]
+    fn cube() {
+        let config = Config {
+            stl_filename: "cube.stl".to_string(),
+            img_filename: "cube.png".to_string()
+        };
+
+        match fs::remove_file(&config.img_filename) {
+            Ok(_) => (),
+            Err(ref error) if error.kind() == ErrorKind::NotFound => (),
+            Err(_) => {
+                panic!("Couldn't clean files before testing");
+            }
+        }
+
+        run(&config)
+            .expect("Error in run function");
+
+        let size = fs::metadata(config.img_filename)
+            .expect("No file created")
+            .len();
+
+        assert_ne!(0, size);
+    }
+}

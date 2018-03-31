@@ -9,7 +9,7 @@ fn main() {
     println!("STL File: {}", config.stl_filename);
     println!("Thumbnail File: {}", config.img_filename);
 
-    if let Err(e) = stl_thumb::run(config) {
+    if let Err(e) = stl_thumb::run(&config) {
         println!("Application error: {}", e);
         process::exit(1);
     }
