@@ -6,3 +6,10 @@ authors = ["Tyler Anderson <unlimitedbacon@gmail.com>"]
 [dependencies]
 clap = "2.31.2"
 stl_io = "0.3.6"
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "cube_benchmark"
+harness = false
