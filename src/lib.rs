@@ -6,7 +6,7 @@ extern crate three;
 use std::error::Error;
 use std::fs::File;
 use clap::{Arg, App};
-use mint::Point3;
+use mint::{Point3, Vector3};
 use stl_io::{Triangle, Vertex};
 use three::Object;
 
@@ -74,14 +74,49 @@ impl BoundingBox {
     }
 }
 
-fn process_tri(tri: &Triangle, verts: &mut Vec<Point3<f32>>, bounds: &mut BoundingBox) {
+// Calculate surface normal of triangle using cross product
+// TODO: The GPU can probably do this a lot faster than we can.
+// See if there is an option for offloading this.
+fn normal(tri: &Triangle) -> Vector3<f32> {
+    let p1 = tri.vertices[0];
+    let p2 = tri.vertices[1];
+    let p3 = tri.vertices[2];
+    let vx = p2[0] - p1[0];
+    let vy = p2[1] - p1[1];
+    let vz = p2[2] - p1[2];
+    let wx = p3[0] - p1[0];
+    let wy = p3[1] - p1[1];
+    let wz = p3[2] - p1[2];
+    let nx = (vy * wz) - (vz * wy);
+    let ny = (vz * wx) - (vx * wz);
+    let nz = (vx * wy) - (vy * wx);
+    let mag = nx.abs() + ny.abs() + nz.abs();
+    let ax = nx / mag;
+    let ay = ny / mag;
+    let az = nz / mag;
+    Vector3 { x: ax, y: ay, z: az }
+}
+
+fn process_tri(tri: &Triangle, geo: &mut three::Geometry, bounds: &mut BoundingBox) {
     for v in tri.vertices.iter() {
         bounds.expand(&v);
         // TODO: Should figure out how to do this with into() instead
-        verts.push(
+        geo.base.vertices.push(
             Point3 { x: v[0], y: v[1], z: v[2] }
         );
         //println!("{:?}", v);
+    }
+    // Use normal from STL file if it is provided, otherwise calculate it ourselves
+    let n: Vector3<f32>;
+    if tri.normal == [0.0, 0.0, 0.0] {
+        println!("Calculating surface normal");
+        n = normal(&tri);
+    } else {
+        n = Vector3 { x: tri.normal[0], y: tri.normal[1], z: tri.normal[2] };
+    }
+    //println!("{:?}",tri.normal);
+    for _ in 0..3 {
+        geo.base.normals.push(n);
     }
 }
 
@@ -109,14 +144,13 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let mut bounds = BoundingBox::new(&v1);
 
     let mut face_count = 0;
-    let mut vertices: Vec<Point3<f32>> = Vec::new();
-    //let mut geometry = three::Geometry { .. three::Geometry::default() };
+    let mut geometry = three::Geometry { .. three::Geometry::default() };
 
-    process_tri(&t1, &mut vertices, &mut bounds);
+    process_tri(&t1, &mut geometry, &mut bounds);
     face_count += 1;
 
     for triangle in stl_iter {
-        process_tri(&triangle.unwrap(), &mut vertices, &mut bounds);
+        process_tri(&triangle.unwrap(), &mut geometry, &mut bounds);
         face_count += 1;
         //println!("{:?}",triangle);
     }
@@ -142,7 +176,6 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     //    [ 0.5, -0.5, -0.5].into(),
     //    [ 0.0,  0.5, -0.5].into(),
     //]);
-    let geometry = three::Geometry::with_vertices(vertices);
     println!("== STL ==");
     debug_geo(&geometry);
     let material = three::material::Phong {
@@ -187,10 +220,10 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         window.factory.mesh(geometry, material)
     };
     sphere.set_position([30.0, 40.0, 2.5]);
-    window.scene.add(&sphere);
+    //window.scene.add(&sphere);
 
     // Lights
-    let hemisphere_light = window.factory.hemisphere_light(0xffffff, 0x8080ff, 0.5);
+    //let hemisphere_light = window.factory.hemisphere_light(0xffffff, 0x8080ff, 0.5);
     //window.scene.add(&hemisphere_light);
     let mut dir_light = window.factory.directional_light(0xffffff, 0.9);
     dir_light.look_at([150.0, 350.0, 350.0], [0.0, 0.0, 0.0], None);
