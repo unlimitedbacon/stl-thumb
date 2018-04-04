@@ -85,6 +85,17 @@ fn process_tri(tri: &Triangle, verts: &mut Vec<Point3<f32>>, bounds: &mut Boundi
     }
 }
 
+fn debug_geo(geometry: &three::Geometry) {
+    println!("Verts: {}", geometry.base.vertices.len());
+    println!("Norms: {}", geometry.base.normals.len());
+    println!("Tangents: {}", geometry.base.tangents.len());
+    println!("Tex Coords: {:?}", geometry.tex_coords);
+    println!("Faces: {:?}", geometry.faces.len());
+    println!("Joints: {:?}", geometry.joints);
+    println!("Shapes: {:?}", geometry.shapes);
+    println!();
+}
+
 pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let mut stl_file = File::open(&config.stl_filename)?;
     //let stl = stl_io::read_stl(&mut stl_file)?;
@@ -98,25 +109,29 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let mut bounds = BoundingBox::new(&v1);
 
     let mut face_count = 0;
-    let mut geometry = three::Geometry { .. three::Geometry::default() };
+    let mut vertices: Vec<Point3<f32>> = Vec::new();
+    //let mut geometry = three::Geometry { .. three::Geometry::default() };
 
-    process_tri(&t1, &mut geometry.base.vertices, &mut bounds);
+    process_tri(&t1, &mut vertices, &mut bounds);
     face_count += 1;
 
     for triangle in stl_iter {
-        process_tri(&triangle.unwrap(), &mut geometry.base.vertices, &mut bounds);
+        process_tri(&triangle.unwrap(), &mut vertices, &mut bounds);
         face_count += 1;
         //println!("{:?}",triangle);
     }
+
+    let center = bounds.center();
 
     println!("Bounds:");
     println!("X: {}, {}", bounds.min_x, bounds.max_x);
     println!("Y: {}, {}", bounds.min_y, bounds.max_y);
     println!("Z: {}, {}", bounds.min_z, bounds.max_z);
     println!("Center:");
-    println!("{:?}", bounds.center());
+    println!("{:?}", center);
     println!("Triangles processed:");
     println!("{}", face_count);
+    println!();
 
     // Graphics Stuff
     // ==============
@@ -127,20 +142,66 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     //    [ 0.5, -0.5, -0.5].into(),
     //    [ 0.0,  0.5, -0.5].into(),
     //]);
-    let material = three::material::Wireframe {
-        color: 0x888888,
+    let geometry = three::Geometry::with_vertices(vertices);
+    println!("== STL ==");
+    debug_geo(&geometry);
+    let material = three::material::Phong {
+        color: 0x00A0ff,
+        glossiness: 80.0,
     };
     let mesh = window.factory.mesh(geometry, material);
     window.scene.add(&mesh);
     window.scene.background = three::Background::Color(0xFFFFFF);
 
-    let center = [0.0, 0.0];
-    let yextent = 20.0;
-    let zrange = -40.0 .. 40.0;
-    let camera = window.factory.orthographic_camera(center, yextent, zrange);
-    let cam_pos = [10.0, -10.0, 20.0];
+    //let camera = window.factory.orthographic_camera(cam_center, yextent, zrange);
+    let camera = window.factory.perspective_camera(45.0, 1.0 .. 500.0);
+    let cam_pos = [150.0, -150.0, 150.0];
     camera.set_position(cam_pos);
-    camera.look_at(cam_pos, [0.0, 0.0, 0.0], None);
+    camera.look_at(cam_pos, center, None);
+
+    // Plane
+    let plane = {
+        let geometry = three::Geometry::plane(
+            (bounds.max_x - bounds.min_x) * 3.0,
+            (bounds.max_y - bounds.min_y) * 3.0,
+        );
+        let material = three::material::Lambert {
+            //color: 0xA0ffA0,
+            color: 0xffffff,
+            flat: false,
+        };
+        window.factory.mesh(geometry, material)
+    };
+    plane.set_position([center[0], center[1], bounds.min_z]);
+    window.scene.add(&plane);
+
+    // Test sphere
+    let sphere = {
+        let geometry = three::Geometry::uv_sphere(40.0, 20, 20);
+        println!("== Sphere ==");
+        debug_geo(&geometry);
+        let material = three::material::Phong {
+            color: 0xffA0A0,
+            glossiness: 80.0,
+        };
+        window.factory.mesh(geometry, material)
+    };
+    sphere.set_position([30.0, 40.0, 2.5]);
+    window.scene.add(&sphere);
+
+    // Lights
+    let hemisphere_light = window.factory.hemisphere_light(0xffffff, 0x8080ff, 0.5);
+    //window.scene.add(&hemisphere_light);
+    let mut dir_light = window.factory.directional_light(0xffffff, 0.9);
+    dir_light.look_at([150.0, 350.0, 350.0], [0.0, 0.0, 0.0], None);
+    let shadow_map = window.factory.shadow_map(2048,2048);
+    dir_light.set_shadow(shadow_map, 400.0, 1.0 .. 1000.0);
+    window.scene.add(&dir_light);
+    let ambient_light = window.factory.ambient_light(0xdc8874, 0.5);
+    window.scene.add(ambient_light);
+    let point_light = window.factory.point_light(0xffffff, 0.5);
+    point_light.set_position([150.0, 350.0, 350.0]);
+    window.scene.add(point_light);
 
     while window.update() {
         window.render(&camera);
