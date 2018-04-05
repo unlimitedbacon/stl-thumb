@@ -8,7 +8,7 @@ use std::fs::File;
 use clap::{Arg, App};
 use mint::{Point3, Vector3};
 use stl_io::{Triangle, Vertex};
-use three::Object;
+use three::{Geometry, Object};
 
 pub struct Config {
     pub stl_filename: String,
@@ -97,7 +97,7 @@ fn normal(tri: &Triangle) -> Vector3<f32> {
     Vector3 { x: ax, y: ay, z: az }
 }
 
-fn process_tri(tri: &Triangle, geo: &mut three::Geometry, bounds: &mut BoundingBox) {
+fn process_tri(tri: &Triangle, geo: &mut Geometry, bounds: &mut BoundingBox) {
     for v in tri.vertices.iter() {
         bounds.expand(&v);
         // TODO: Should figure out how to do this with into() instead
@@ -120,7 +120,7 @@ fn process_tri(tri: &Triangle, geo: &mut three::Geometry, bounds: &mut BoundingB
     }
 }
 
-fn debug_geo(geometry: &three::Geometry) {
+fn debug_geo(geometry: &Geometry) {
     println!("Verts: {}", geometry.base.vertices.len());
     println!("Norms: {}", geometry.base.normals.len());
     println!("Tangents: {}", geometry.base.tangents.len());
@@ -131,11 +131,9 @@ fn debug_geo(geometry: &three::Geometry) {
     println!();
 }
 
-pub fn run(config: &Config) -> Result<(), Box<Error>> {
-    let mut stl_file = File::open(&config.stl_filename)?;
+fn load_mesh(mut stl_file: File) -> Result<(Geometry,BoundingBox), Box<Error>> {
     //let stl = stl_io::read_stl(&mut stl_file)?;
     //println!("{:?}", stl);
-
     let mut stl_iter = stl_io::create_stl_reader(&mut stl_file).unwrap();
 
     // Get starting point for finding bounding box
@@ -144,7 +142,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let mut bounds = BoundingBox::new(&v1);
 
     let mut face_count = 0;
-    let mut geometry = three::Geometry { .. three::Geometry::default() };
+    let mut geometry = Geometry { .. Geometry::default() };
 
     process_tri(&t1, &mut geometry, &mut bounds);
     face_count += 1;
@@ -155,27 +153,34 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         //println!("{:?}",triangle);
     }
 
-    let center = bounds.center();
-
     println!("Bounds:");
     println!("X: {}, {}", bounds.min_x, bounds.max_x);
     println!("Y: {}, {}", bounds.min_y, bounds.max_y);
     println!("Z: {}, {}", bounds.min_z, bounds.max_z);
     println!("Center:");
-    println!("{:?}", center);
+    println!("{:?}", bounds.center());
     println!("Triangles processed:");
     println!("{}", face_count);
     println!();
+
+    Ok((geometry,bounds))
+}
+
+pub fn run(config: &Config) -> Result<(), Box<Error>> {
+    // Create geometry from STL file
+    // =========================
+
+    let stl_file = File::open(&config.stl_filename)?;
+    let (geometry, bounds) = load_mesh(stl_file)?;
+    let center = bounds.center();
+
 
     // Graphics Stuff
     // ==============
 
     let mut window = three::Window::new(env!("CARGO_PKG_NAME"));
-    //let geometry = three::Geometry::with_vertices(vec![
-    //    [-0.5, -0.5, -0.5].into(),
-    //    [ 0.5, -0.5, -0.5].into(),
-    //    [ 0.0,  0.5, -0.5].into(),
-    //]);
+    window.scene.background = three::Background::Color(0xFFFFFF);
+
     println!("== STL ==");
     debug_geo(&geometry);
     let material = three::material::Phong {
@@ -184,7 +189,6 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     };
     let mesh = window.factory.mesh(geometry, material);
     window.scene.add(&mesh);
-    window.scene.background = three::Background::Color(0xFFFFFF);
 
     //let camera = window.factory.orthographic_camera(cam_center, yextent, zrange);
     let camera = window.factory.perspective_camera(45.0, 1.0 .. 500.0);
@@ -194,7 +198,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     // Plane
     let plane = {
-        let geometry = three::Geometry::plane(
+        let geometry = Geometry::plane(
             (bounds.max_x - bounds.min_x) * 3.0,
             (bounds.max_y - bounds.min_y) * 3.0,
         );
@@ -210,7 +214,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     // Test sphere
     let sphere = {
-        let geometry = three::Geometry::uv_sphere(40.0, 20, 20);
+        let geometry = Geometry::uv_sphere(40.0, 20, 20);
         println!("== Sphere ==");
         debug_geo(&geometry);
         let material = three::material::Phong {
