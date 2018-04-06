@@ -8,11 +8,10 @@ use stl_thumb::Config;
 fn cube() {
     let config = Config {
         stl_filename: "cube.stl".to_string(),
-        img_filename: "cube.png".to_string()
+        img_filename: "cube.png".to_string(),
     };
 
-    stl_thumb::run(&config)
-        .expect("Error in run function");
+    stl_thumb::run(&config).expect("Error in run function");
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
