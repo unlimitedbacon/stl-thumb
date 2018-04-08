@@ -1,3 +1,4 @@
+extern crate cgmath;
 extern crate clap;
 extern crate mint;
 extern crate stl_io;
@@ -6,7 +7,6 @@ extern crate three;
 use std::error::Error;
 use std::fs::File;
 use clap::{App, Arg};
-use mint::{Point3, Vector3};
 use stl_io::{Triangle, Vertex};
 use three::{Geometry, Object};
 
@@ -93,27 +93,18 @@ impl BoundingBox {
 // Calculate surface normal of triangle using cross product
 // TODO: The GPU can probably do this a lot faster than we can.
 // See if there is an option for offloading this.
-fn normal(tri: &Triangle) -> Vector3<f32> {
-    let p1 = tri.vertices[0];
-    let p2 = tri.vertices[1];
-    let p3 = tri.vertices[2];
-    let vx = p2[0] - p1[0];
-    let vy = p2[1] - p1[1];
-    let vz = p2[2] - p1[2];
-    let wx = p3[0] - p1[0];
-    let wy = p3[1] - p1[1];
-    let wz = p3[2] - p1[2];
-    let nx = (vy * wz) - (vz * wy);
-    let ny = (vz * wx) - (vx * wz);
-    let nz = (vx * wy) - (vy * wx);
-    let mag = nx.abs() + ny.abs() + nz.abs();
-    let ax = nx / mag;
-    let ay = ny / mag;
-    let az = nz / mag;
-    Vector3 {
-        x: ax,
-        y: ay,
-        z: az,
+fn normal(tri: &Triangle) -> mint::Vector3<f32> {
+    let p1: cgmath::Vector3<f32> = tri.vertices[0].into();
+    let p2: cgmath::Vector3<f32> = tri.vertices[1].into();
+    let p3: cgmath::Vector3<f32> = tri.vertices[2].into();
+    let v = p2 - p1;
+    let w = p3 - p1;
+    let n = v.cross(w);
+    let mag = n.x.abs() + n.y.abs() + n.z.abs();
+    mint::Vector3 {
+        x: n.x / mag,
+        y: n.y / mag,
+        z: n.z / mag,
     }
 }
 
@@ -121,7 +112,7 @@ fn process_tri(tri: &Triangle, geo: &mut Geometry, bounds: &mut BoundingBox) {
     for v in tri.vertices.iter() {
         bounds.expand(&v);
         // TODO: Should figure out how to do this with into() instead
-        geo.base.vertices.push(Point3 {
+        geo.base.vertices.push(mint::Point3 {
             x: v[0],
             y: v[1],
             z: v[2],
@@ -129,12 +120,12 @@ fn process_tri(tri: &Triangle, geo: &mut Geometry, bounds: &mut BoundingBox) {
         //println!("{:?}", v);
     }
     // Use normal from STL file if it is provided, otherwise calculate it ourselves
-    let n: Vector3<f32>;
+    let n: mint::Vector3<f32>;
     if tri.normal == [0.0, 0.0, 0.0] {
         println!("Calculating surface normal");
         n = normal(&tri);
     } else {
-        n = Vector3 {
+        n = mint::Vector3 {
             x: tri.normal[0],
             y: tri.normal[1],
             z: tri.normal[2],
