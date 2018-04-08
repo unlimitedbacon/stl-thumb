@@ -7,8 +7,13 @@ extern crate three;
 use std::error::Error;
 use std::fs::File;
 use clap::{App, Arg};
+use cgmath::Rotation;
 use stl_io::{Triangle, Vertex};
 use three::{Geometry, Object};
+
+const CAM_AZIMUTH_DEG: f32 = -60.0;
+const CAM_ELEVATION_DEG: f32 = 30.0;
+const CAM_FOV_DEG: f32 = 30.0;
 
 pub struct Config {
     pub stl_filename: String,
@@ -46,19 +51,19 @@ impl Config {
 }
 
 struct BoundingBox {
-    min: mint::Point3<f32>,
-    max: mint::Point3<f32>,
+    min: cgmath::Point3<f32>,
+    max: cgmath::Point3<f32>,
 }
 
 impl BoundingBox {
     fn new(vert: &Vertex) -> BoundingBox {
         BoundingBox {
-            min: mint::Point3 {
+            min: cgmath::Point3 {
                 x: vert[0],
                 y: vert[1],
                 z: vert[2],
             },
-            max: mint::Point3 {
+            max: cgmath::Point3 {
                 x: vert[0],
                 y: vert[1],
                 z: vert[2],
@@ -82,11 +87,12 @@ impl BoundingBox {
             self.max.z = vert[2];
         }
     }
-    fn center(&self) -> Vertex {
-        let x = (self.min.x + self.max.x) / 2.0;
-        let y = (self.min.y + self.max.y) / 2.0;
-        let z = (self.min.z + self.max.z) / 2.0;
-        [x, y, z]
+    fn center(&self) -> cgmath::Point3<f32> {
+        cgmath::Point3 {
+            x: (self.min.x + self.max.x) / 2.0,
+            y: (self.min.y + self.max.y) / 2.0,
+            z: (self.min.z + self.max.z) / 2.0,
+        }
     }
 }
 
@@ -185,9 +191,24 @@ fn load_mesh(mut stl_file: File) -> Result<(Geometry, BoundingBox), Box<Error>> 
     Ok((geometry, bounds))
 }
 
-//fn locate_camera(bounds: BoundingBox) -> Vec<f32> {
+fn locate_camera(bounds: &BoundingBox) -> mint::Point3<f32> {
     // Transform bounding box into camera space
-//}
+    let p1 = bounds.max - bounds.center();
+    let rot: cgmath::Basis2<f32> = cgmath::Rotation2::from_angle(cgmath::Deg(-CAM_AZIMUTH_DEG));
+    let p2 = rot.rotate_vector(cgmath::Vector2{
+        x: p1.x,
+        y: p1.y,
+    });
+    // TODO: three-rs uses vertical FOV but we are using horizontal FOV here.
+    // Adjust accordingly.
+    let d = p2.y / (CAM_FOV_DEG.to_radians()/2.0).tan() + p2.x;
+    mint::Point3 {
+        x: d * CAM_AZIMUTH_DEG.to_radians().cos() + bounds.center().x,
+        y: d * CAM_AZIMUTH_DEG.to_radians().sin() + bounds.center().y,
+        z: d * CAM_ELEVATION_DEG.to_radians().tan() + bounds.center().z,
+    }
+    // TODO: Account for object that are taller than wide
+}
 
 pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create geometry from STL file
@@ -213,8 +234,9 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     window.scene.add(&mesh);
 
     //let camera = window.factory.orthographic_camera(cam_center, yextent, zrange);
-    let camera = window.factory.perspective_camera(45.0, 1.0..500.0);
-    let cam_pos = [150.0, -150.0, 150.0];
+    let camera = window.factory.perspective_camera(CAM_FOV_DEG, 1.0..500.0);
+    //let cam_pos = [150.0, -150.0, 150.0];
+    let cam_pos = locate_camera(&bounds);
     camera.set_position(cam_pos);
     camera.look_at(cam_pos, center, None);
 
@@ -251,8 +273,9 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Lights
     //let hemisphere_light = window.factory.hemisphere_light(0xffffff, 0x8080ff, 0.5);
     //window.scene.add(&hemisphere_light);
+    // TODO: Change dir_light position and shadow map size based on size of object
     let mut dir_light = window.factory.directional_light(0xffffff, 0.9);
-    dir_light.look_at([150.0, 350.0, 350.0], [0.0, 0.0, 0.0], None);
+    dir_light.look_at([-100.0, -400.0, 350.0], [0.0, 0.0, 0.0], None);
     let shadow_map = window.factory.shadow_map(2048, 2048);
     dir_light.set_shadow(shadow_map, 400.0, 1.0..1000.0);
     window.scene.add(&dir_light);
