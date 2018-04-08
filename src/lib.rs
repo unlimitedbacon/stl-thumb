@@ -46,46 +46,46 @@ impl Config {
 }
 
 struct BoundingBox {
-    min_x: f32,
-    min_y: f32,
-    min_z: f32,
-    max_x: f32,
-    max_y: f32,
-    max_z: f32,
+    min: mint::Point3<f32>,
+    max: mint::Point3<f32>,
 }
 
 impl BoundingBox {
     fn new(vert: &Vertex) -> BoundingBox {
         BoundingBox {
-            min_x: vert[0],
-            min_y: vert[1],
-            min_z: vert[2],
-            max_x: vert[0],
-            max_y: vert[1],
-            max_z: vert[2],
+            min: mint::Point3 {
+                x: vert[0],
+                y: vert[1],
+                z: vert[2],
+            },
+            max: mint::Point3 {
+                x: vert[0],
+                y: vert[1],
+                z: vert[2],
+            },
         }
     }
     fn expand(&mut self, vert: &Vertex) {
-        if vert[0] < self.min_x {
-            self.min_x = vert[0];
-        } else if vert[0] > self.max_x {
-            self.max_x = vert[0];
+        if vert[0] < self.min.x {
+            self.min.x = vert[0];
+        } else if vert[0] > self.max.x {
+            self.max.x = vert[0];
         }
-        if vert[1] < self.min_y {
-            self.min_y = vert[1];
-        } else if vert[1] > self.max_y {
-            self.max_y = vert[1];
+        if vert[1] < self.min.y {
+            self.min.y = vert[1];
+        } else if vert[1] > self.max.y {
+            self.max.y = vert[1];
         }
-        if vert[2] < self.min_z {
-            self.min_z = vert[2];
-        } else if vert[2] > self.max_z {
-            self.max_z = vert[2];
+        if vert[2] < self.min.z {
+            self.min.z = vert[2];
+        } else if vert[2] > self.max.z {
+            self.max.z = vert[2];
         }
     }
     fn center(&self) -> Vertex {
-        let x = (self.min_x + self.max_x) / 2.0;
-        let y = (self.min_y + self.max_y) / 2.0;
-        let z = (self.min_z + self.max_z) / 2.0;
+        let x = (self.min.x + self.max.x) / 2.0;
+        let y = (self.min.y + self.max.y) / 2.0;
+        let z = (self.min.z + self.max.z) / 2.0;
         [x, y, z]
     }
 }
@@ -173,9 +173,9 @@ fn load_mesh(mut stl_file: File) -> Result<(Geometry, BoundingBox), Box<Error>> 
     }
 
     println!("Bounds:");
-    println!("X: {}, {}", bounds.min_x, bounds.max_x);
-    println!("Y: {}, {}", bounds.min_y, bounds.max_y);
-    println!("Z: {}, {}", bounds.min_z, bounds.max_z);
+    println!("X: {}, {}", bounds.min.x, bounds.max.x);
+    println!("Y: {}, {}", bounds.min.y, bounds.max.y);
+    println!("Z: {}, {}", bounds.min.z, bounds.max.z);
     println!("Center:");
     println!("{:?}", bounds.center());
     println!("Triangles processed:");
@@ -184,6 +184,10 @@ fn load_mesh(mut stl_file: File) -> Result<(Geometry, BoundingBox), Box<Error>> 
 
     Ok((geometry, bounds))
 }
+
+//fn locate_camera(bounds: BoundingBox) -> Vec<f32> {
+    // Transform bounding box into camera space
+//}
 
 pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create geometry from STL file
@@ -217,8 +221,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Plane
     let plane = {
         let geometry = Geometry::plane(
-            (bounds.max_x - bounds.min_x) * 3.0,
-            (bounds.max_y - bounds.min_y) * 3.0,
+            (bounds.max.x - bounds.min.x) * 3.0,
+            (bounds.max.y - bounds.min.y) * 3.0,
         );
         let material = three::material::Lambert {
             //color: 0xA0ffA0,
@@ -227,7 +231,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         };
         window.factory.mesh(geometry, material)
     };
-    plane.set_position([center[0], center[1], bounds.min_z]);
+    plane.set_position([center[0], center[1], bounds.min.z]);
     window.scene.add(&plane);
 
     // Test sphere
