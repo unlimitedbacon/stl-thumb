@@ -6,9 +6,10 @@ authors = ["Tyler Anderson <unlimitedbacon@gmail.com>"]
 [dependencies]
 cgmath = { version = "0.16.1", features = ["mint"] }
 clap = "2.31.2"
+glium = "*"
+image = "*"
 mint = "0.5.0"
 stl_io = "0.3.6"
-three = "0.3.0"
 
 [dev-dependencies]
 criterion = "0.2"
