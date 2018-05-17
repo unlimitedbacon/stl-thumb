@@ -103,6 +103,10 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
     let display = glium::Display::new(window, context, &events_loop).unwrap();
+    //let context = glutin::HeadlessRendererBuilder::new(WIDTH, HEIGHT)
+    //    //.with_depth_buffer(24)
+    //    .build().unwrap();
+    //let display = glium::HeadlessRenderer::new(context).unwrap();
 
     let params = glium::DrawParameters {
         depth: glium::Depth {
@@ -207,28 +211,29 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     let (width, height) = display.get_framebuffer_dimensions();
     let pixels: glium::texture::RawImage2d<u8> = display.read_front_buffer();
-    let img: image::ImageBuffer<image::Rgba<u8>, Cow<[u8]>> = image::ImageBuffer::from_raw(width,height,pixels.data).unwrap();
+    let img = image::ImageBuffer::from_raw(width, height, pixels.data.into_owned()).unwrap();
+    let img = image::DynamicImage::ImageRgba8(img).flipv();
     img.save(&config.img_filename)
         .expect("Error saving image");
 
     // Wait until window is closed
     // ===========================
 
-    let mut closed = false;
-    let sleep_time = time::Duration::from_millis(10);
-    while !closed {
-        thread::sleep(sleep_time);
-        // Listing the events produced by the application and waiting to be received
-        events_loop.poll_events(|ev| {
-            match ev {
-                glutin::Event::WindowEvent { event, .. } => match event {
-                    glutin::WindowEvent::Closed => closed = true,
-                    _ => (),
-                },
-                _ => (),
-            }
-        });
-    }
+    //let mut closed = false;
+    //let sleep_time = time::Duration::from_millis(10);
+    //while !closed {
+    //    thread::sleep(sleep_time);
+    //    // Listing the events produced by the application and waiting to be received
+    //    events_loop.poll_events(|ev| {
+    //        match ev {
+    //            glutin::Event::WindowEvent { event, .. } => match event {
+    //                glutin::WindowEvent::Closed => closed = true,
+    //                _ => (),
+    //            },
+    //            _ => (),
+    //        }
+    //    });
+    //}
 
     //let mut window = three::Window::new(env!("CARGO_PKG_NAME"));
     //window.scene.background = three::Background::Color(0xFFFFFF);
