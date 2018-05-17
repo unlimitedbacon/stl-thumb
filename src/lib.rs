@@ -17,8 +17,6 @@ use glium::{glutin, Surface};
 use mesh::Mesh;
 
 // TODO: Move this stuff to config module
-const WIDTH: u32 = 1024;
-const HEIGHT: u32 = 768;
 const BACKGROUND_COLOR: (f32, f32, f32, f32) = (1.0, 1.0, 1.0, 0.0);
 const CAM_AZIMUTH_DEG: f32 = -60.0;
 const CAM_ELEVATION_DEG: f32 = 30.0;
@@ -100,13 +98,13 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("stl-thumb")
-        .with_dimensions(WIDTH, HEIGHT)
-        .with_min_dimensions(WIDTH, HEIGHT)
-        .with_max_dimensions(WIDTH, HEIGHT);
+        .with_dimensions(config.width, config.height)
+        .with_min_dimensions(config.width, config.height)
+        .with_max_dimensions(config.width, config.height);
     let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
     let display = glium::Display::new(window, context, &events_loop).unwrap();
-    //let context = glutin::HeadlessRendererBuilder::new(WIDTH, HEIGHT)
+    //let context = glutin::HeadlessRendererBuilder::new(&config.width, &config.height)
     //    //.with_depth_buffer(24)
     //    .build().unwrap();
     //let display = glium::HeadlessRenderer::new(context).unwrap();
@@ -164,7 +162,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     // Perspective matrix (give illusion of depth)
     let perspective = {
-        let (width, height) = (WIDTH, HEIGHT);
+        let (width, height) = (config.width, config.height);
         let aspect_ratio = height as f32 / width as f32;
 
         let fov = CAM_FOV_DEG.to_radians();
