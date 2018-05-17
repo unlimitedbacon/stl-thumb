@@ -1,56 +1,21 @@
 extern crate cgmath;
-extern crate clap;
 #[macro_use]
 extern crate glium;
 extern crate image;
 extern crate mint;
 
+pub mod config;
 mod mesh;
 
 use std::error::Error;
 use std::fs::File;
-use clap::{App, Arg};
+use config::Config;
 use cgmath::Rotation;
 use mesh::Mesh;
 
 const CAM_AZIMUTH_DEG: f32 = -60.0;
 const CAM_ELEVATION_DEG: f32 = 30.0;
 const CAM_FOV_DEG: f32 = 30.0;
-
-pub struct Config {
-    pub stl_filename: String,
-    pub img_filename: String,
-}
-
-impl Config {
-    pub fn new() -> Config {
-        // Define command line arguments
-        let matches = App::new(env!("CARGO_PKG_NAME"))
-            .version(env!("CARGO_PKG_VERSION"))
-            .author(env!("CARGO_PKG_AUTHORS"))
-            .arg(
-                Arg::with_name("STL_FILE")
-                    .help("STL file")
-                    .required(true)
-                    .index(1),
-            )
-            .arg(
-                Arg::with_name("IMG_FILE")
-                    .help("Thumbnail image")
-                    .required(true)
-                    .index(2),
-            )
-            .get_matches();
-
-        let stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
-        let img_filename = matches.value_of("IMG_FILE").unwrap().to_string();
-
-        Config {
-            stl_filename,
-            img_filename,
-        }
-    }
-}
 
 fn locate_camera(bounds: &mesh::BoundingBox) -> mint::Point3<f32> {
     // Transform bounding box into camera space

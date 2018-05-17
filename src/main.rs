@@ -1,7 +1,7 @@
 extern crate stl_thumb;
 
 use std::process;
-use stl_thumb::Config;
+use stl_thumb::config::Config;
 
 fn main() {
     let config = Config::new();

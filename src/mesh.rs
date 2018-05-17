@@ -65,6 +65,15 @@ impl BoundingBox {
             z: (self.min.z + self.max.z) / 2.0,
         }
     }
+    fn length(&self) -> f32 {
+        self.max.x - self.min.x
+    }
+    fn width(&self) -> f32 {
+        self.max.y - self.min.y
+    }
+    fn height(&self) -> f32 {
+        self.max.z - self.min.z
+    }
 }
 
 impl fmt::Display for BoundingBox {
@@ -122,14 +131,6 @@ impl Mesh {
         Ok(mesh)
     }
 
-    pub fn debug(&self) {
-        println!("Verts: {}", self.vertices.len());
-        println!("Norms: {}", self.normals.len());
-        //println!("Tex Coords: {:?}", geometry.tex_coords);
-        println!("Indices: {:?}", self.indices.len());
-        println!();
-    }
-
     fn process_tri(&mut self, tri: &stl_io::Triangle) {
         for v in tri.vertices.iter() {
             self.bounds.expand(&v);
@@ -152,6 +153,17 @@ impl Mesh {
                 normal: n,
             });
         }
+    }
+}
+
+impl fmt::Display for Mesh {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Verts: {}", self.vertices.len())?;
+        writeln!(f, "Norms: {}", self.normals.len())?;
+        //writeln!(f, "Tex Coords: {:?}", geometry.tex_coords)?;
+        writeln!(f, "Indices: {:?}", self.indices.len())?;
+        writeln!(f, )?;
+        Ok(())
     }
 }
 
