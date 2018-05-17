@@ -14,3 +14,9 @@ fn main() {
         process::exit(1);
     }
 }
+
+// Notes
+// =====
+// https://tecnocode.co.uk/2013/10/21/writing-a-gnome-thumbnailer/
+// https://wiki.archlinux.org/index.php/XDG_MIME_Applications#Shared_MIME_database
+// https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en (outdated)

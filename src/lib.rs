@@ -7,7 +7,6 @@ extern crate mint;
 pub mod config;
 mod mesh;
 
-use std::borrow::Cow;
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -45,6 +44,7 @@ fn locate_camera(bounds: &mesh::BoundingBox) -> mint::Point3<f32> {
 }
 
 fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
+    // TODO: Use matrix math in here
     let f = {
         let f = direction;
         let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
@@ -83,6 +83,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create geometry from STL file
     // =========================
 
+    // TODO: Add support for URIs instead of plain file names
+    // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
     let stl_file = File::open(&config.stl_filename)?;
     let mesh = Mesh::from_stl(stl_file)?;
     let center = mesh.bounds.center();
@@ -94,6 +96,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create GL context
     // -----------------
 
+    // TODO: -v option to switch between window and headless rendering
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("stl-thumb")
@@ -121,16 +124,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Load and compile shaders
     // ------------------------
 
-    let mut vertex_shader_file = File::open("src/model.vert")
-        .expect("Error opening vertex shader file");
-    let mut vertex_shader_src = String::new();
-    vertex_shader_file.read_to_string(&mut vertex_shader_src)
-        .expect("Error reading vertex shader file");
-    let mut pixel_shader_file = File::open("src/model.frag")
-        .expect("Error opening pixel shader file");
-    let mut pixel_shader_src = String::new();
-    pixel_shader_file.read_to_string(&mut pixel_shader_src)
-        .expect("Error reading pixel shader file");
+    let vertex_shader_src = include_str!("model.vert");
+    let pixel_shader_src = include_str!("model.frag");
 
     // TODO: Cache program binary
     let program = glium::Program::from_source(&display, &vertex_shader_src, &pixel_shader_src, None);
@@ -148,12 +143,14 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     let vertex_buf = glium::VertexBuffer::new(&display, &mesh.vertices).unwrap();
     let normal_buf = glium::VertexBuffer::new(&display, &mesh.normals).unwrap();
+    // Can use NoIndices here because STLs are dumb
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
     // Setup uniforms
     // --------------
 
     // Transformation matrix (positions, scales and rotates model)
+    // TODO: Scale model to fit 1x1x1 box
     let model = [
         [0.01, 0.0, 0.0, 0.0],
         [0.0, 0.01, 0.0, 0.0],
@@ -162,6 +159,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     ];
 
     // View matrix (convert to positions relative to camera)
+    // TODO: Swap Y and Z axis
     let view = view_matrix(&[2.0, 1.0, 1.0], &[-2.0, -1.0, 1.0], &[0.0, 1.0, 0.0]);
 
     // Perspective matrix (give illusion of depth)
@@ -200,9 +198,10 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         let mut target = display.draw();
         // Fills background color and clears depth buffer
         target.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
-        // Can use NoIndices here because STLs are dumb
         target.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
             .unwrap();
+        // TODO: Antialiasing
+        // TODO: Shadows
         target.finish().unwrap();
     }
 

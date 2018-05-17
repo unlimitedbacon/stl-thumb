@@ -148,6 +148,7 @@ impl Mesh {
             n = tri.normal;
         }
         //println!("{:?}",tri.normal);
+        // TODO: Figure out how to get away with 1 normal instead of 3
         for _ in 0..3 {
             self.normals.push( Normal{
                 normal: n,

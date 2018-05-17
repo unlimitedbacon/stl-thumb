@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=stl-thumb
+Exec=stl-thumb -s %s %u %o
+MimeType=model/x.stl-ascii;model/x.stl-binary;
