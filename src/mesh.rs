@@ -162,7 +162,7 @@ impl fmt::Display for Mesh {
         writeln!(f, "Norms: {}", self.normals.len())?;
         //writeln!(f, "Tex Coords: {:?}", geometry.tex_coords)?;
         writeln!(f, "Indices: {:?}", self.indices.len())?;
-        writeln!(f, )?;
+        writeln!(f)?;
         Ok(())
     }
 }

@@ -7,12 +7,20 @@ extern crate mint;
 pub mod config;
 mod mesh;
 
+use std::borrow::Cow;
 use std::error::Error;
 use std::fs::File;
+use std::io::prelude::*;
+use std::{thread, time};
 use config::Config;
 use cgmath::Rotation;
+use glium::{glutin, Surface};
 use mesh::Mesh;
 
+// TODO: Move this stuff to config module
+const WIDTH: u32 = 1024;
+const HEIGHT: u32 = 768;
+const BACKGROUND_COLOR: (f32, f32, f32, f32) = (1.0, 1.0, 1.0, 0.0);
 const CAM_AZIMUTH_DEG: f32 = -60.0;
 const CAM_ELEVATION_DEG: f32 = 30.0;
 const CAM_FOV_DEG: f32 = 30.0;
@@ -36,6 +44,41 @@ fn locate_camera(bounds: &mesh::BoundingBox) -> mint::Point3<f32> {
     // TODO: Account for object that are taller than wide
 }
 
+fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
+    let f = {
+        let f = direction;
+        let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
+        let len = len.sqrt();
+        [f[0] / len, f[1] / len, f[2] / len]
+    };
+
+    let s = [up[1] * f[2] - up[2] * f[1],
+             up[2] * f[0] - up[0] * f[2],
+             up[0] * f[1] - up[1] * f[0]];
+
+    let s_norm = {
+        let len = s[0] * s[0] + s[1] * s[1] + s[2] * s[2];
+        let len = len.sqrt();
+        [s[0] / len, s[1] / len, s[2] / len]
+    };
+
+    let u = [f[1] * s_norm[2] - f[2] * s_norm[1],
+             f[2] * s_norm[0] - f[0] * s_norm[2],
+             f[0] * s_norm[1] - f[1] * s_norm[0]];
+
+    let p = [-position[0] * s_norm[0] - position[1] * s_norm[1] - position[2] * s_norm[2],
+             -position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
+             -position[0] * f[0] - position[1] * f[1] - position[2] * f[2]];
+
+    [
+        [s_norm[0], u[0], f[0], 0.0],
+        [s_norm[1], u[1], f[1], 0.0],
+        [s_norm[2], u[2], f[2], 0.0],
+        [p[0], p[1], p[2], 1.0],
+    ]
+}
+
+
 pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create geometry from STL file
     // =========================
@@ -44,8 +87,148 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let mesh = Mesh::from_stl(stl_file)?;
     let center = mesh.bounds.center();
 
+
     // Graphics Stuff
     // ==============
+
+    // Create GL context
+    // -----------------
+
+    let mut events_loop = glutin::EventsLoop::new();
+    let window = glutin::WindowBuilder::new()
+        .with_title("stl-thumb")
+        .with_dimensions(WIDTH, HEIGHT)
+        .with_min_dimensions(WIDTH, HEIGHT)
+        .with_max_dimensions(WIDTH, HEIGHT);
+    let context = glutin::ContextBuilder::new()
+        .with_depth_buffer(24);
+    let display = glium::Display::new(window, context, &events_loop).unwrap();
+
+    let params = glium::DrawParameters {
+        depth: glium::Depth {
+            test: glium::draw_parameters::DepthTest::IfLess,
+            write: true,
+            .. Default::default()
+        },
+        backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
+        .. Default::default()
+    };
+
+    // Load and compile shaders
+    // ------------------------
+
+    let mut vertex_shader_file = File::open("src/model.vert")
+        .expect("Error opening vertex shader file");
+    let mut vertex_shader_src = String::new();
+    vertex_shader_file.read_to_string(&mut vertex_shader_src)
+        .expect("Error reading vertex shader file");
+    let mut pixel_shader_file = File::open("src/model.frag")
+        .expect("Error opening pixel shader file");
+    let mut pixel_shader_src = String::new();
+    pixel_shader_file.read_to_string(&mut pixel_shader_src)
+        .expect("Error reading pixel shader file");
+
+    // TODO: Cache program binary
+    let program = glium::Program::from_source(&display, &vertex_shader_src, &pixel_shader_src, None);
+    let program = match program {
+        Ok(p) => p,
+        Err(glium::CompilationError(err)) => {
+            eprintln!("{}",err);
+            panic!("Compiling shaders");
+        },
+        Err(err) => panic!("{}",err),
+    };
+
+    // Send mesh data to GPU
+    // ---------------------
+
+    let vertex_buf = glium::VertexBuffer::new(&display, &mesh.vertices).unwrap();
+    let normal_buf = glium::VertexBuffer::new(&display, &mesh.normals).unwrap();
+    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
+
+    // Setup uniforms
+    // --------------
+
+    // Transformation matrix (positions, scales and rotates model)
+    let model = [
+        [0.01, 0.0, 0.0, 0.0],
+        [0.0, 0.01, 0.0, 0.0],
+        [0.0, 0.0, 0.01, 0.0],
+        [0.0, 0.0, 2.0, 1.0f32],
+    ];
+
+    // View matrix (convert to positions relative to camera)
+    let view = view_matrix(&[2.0, 1.0, 1.0], &[-2.0, -1.0, 1.0], &[0.0, 1.0, 0.0]);
+
+    // Perspective matrix (give illusion of depth)
+    let perspective = {
+        let (width, height) = (WIDTH, HEIGHT);
+        let aspect_ratio = height as f32 / width as f32;
+
+        let fov = CAM_FOV_DEG.to_radians();
+        let zfar = 1024.0;
+        let znear = 0.1;
+
+        let f = 1.0 / (fov / 2.0).tan();
+
+        [
+            [f * aspect_ratio, 0.0,                            0.0, 0.0],
+            [             0.0,   f,                            0.0, 0.0],
+            [             0.0, 0.0,      (zfar+znear)/(zfar-znear), 1.0],
+            [             0.0, 0.0, -(2.0*zfar*znear)/(zfar-znear), 0.0],
+        ]
+    };
+
+    // Direction of light source
+    let light = [-1.4, 0.4, -0.7f32];
+
+    let uniforms = uniform! {
+        model: model,
+        view: view,
+        perspective: perspective,
+        u_light: light,
+    };
+
+    // Draw
+    // ----
+
+    {
+        let mut target = display.draw();
+        // Fills background color and clears depth buffer
+        target.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
+        // Can use NoIndices here because STLs are dumb
+        target.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
+            .unwrap();
+        target.finish().unwrap();
+    }
+
+    // Save Image
+    // ==========
+
+    let (width, height) = display.get_framebuffer_dimensions();
+    let pixels: glium::texture::RawImage2d<u8> = display.read_front_buffer();
+    let img: image::ImageBuffer<image::Rgba<u8>, Cow<[u8]>> = image::ImageBuffer::from_raw(width,height,pixels.data).unwrap();
+    img.save(&config.img_filename)
+        .expect("Error saving image");
+
+    // Wait until window is closed
+    // ===========================
+
+    let mut closed = false;
+    let sleep_time = time::Duration::from_millis(10);
+    while !closed {
+        thread::sleep(sleep_time);
+        // Listing the events produced by the application and waiting to be received
+        events_loop.poll_events(|ev| {
+            match ev {
+                glutin::Event::WindowEvent { event, .. } => match event {
+                    glutin::WindowEvent::Closed => closed = true,
+                    _ => (),
+                },
+                _ => (),
+            }
+        });
+    }
 
     //let mut window = three::Window::new(env!("CARGO_PKG_NAME"));
     //window.scene.background = three::Background::Color(0xFFFFFF);
