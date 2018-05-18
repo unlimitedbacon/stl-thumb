@@ -100,14 +100,24 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         .with_title("stl-thumb")
         .with_dimensions(config.width, config.height)
         .with_min_dimensions(config.width, config.height)
-        .with_max_dimensions(config.width, config.height);
+        .with_max_dimensions(config.width, config.height)
+        .with_visibility(config.visible);
     let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
     let display = glium::Display::new(window, context, &events_loop).unwrap();
-    //let context = glutin::HeadlessRendererBuilder::new(&config.width, &config.height)
+    //let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
     //    //.with_depth_buffer(24)
     //    .build().unwrap();
     //let display = glium::HeadlessRenderer::new(context).unwrap();
+
+    // Print context information
+    println!("GL Version:   {:?}", display.get_opengl_version());
+    println!("GL Version:   {}", display.get_opengl_version_string());
+    println!("GLSL Version: {:?}", display.get_supported_glsl_version());
+    println!("Vendor:       {}", display.get_opengl_vendor_string());
+    println!("Renderer      {}", display.get_opengl_renderer_string());
+    println!("Free GPU Mem: {:?}", display.get_free_video_memory());
+
 
     let params = glium::DrawParameters {
         depth: glium::Depth {

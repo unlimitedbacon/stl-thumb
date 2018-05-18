@@ -5,6 +5,7 @@ pub struct Config {
     pub img_filename: String,
     pub width: u32,
     pub height: u32,
+    pub visible: bool,
 }
 
 impl Config {
@@ -33,6 +34,12 @@ impl Config {
                     .takes_value(true)
                     .required(false)
             )
+            .arg(
+                clap::Arg::with_name("visible")
+                    .help("Display the thumbnail in a window")
+                    .short("v")
+                    .required(false)
+            )
             .get_matches();
 
         let stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
@@ -43,12 +50,14 @@ impl Config {
             .expect("Invalid size");
         let height = height.parse::<u32>()
             .expect("Invalid size");
+        let visible = matches.is_present("visible");
 
         Config {
             stl_filename,
             img_filename,
             width,
             height,
+            visible,
         }
     }
 }
