@@ -9,7 +9,6 @@ mod mesh;
 
 use std::error::Error;
 use std::fs::File;
-use std::io::prelude::*;
 use std::{thread, time};
 use config::Config;
 use cgmath::Rotation;
@@ -21,6 +20,7 @@ const BACKGROUND_COLOR: (f32, f32, f32, f32) = (1.0, 1.0, 1.0, 0.0);
 const CAM_AZIMUTH_DEG: f32 = -60.0;
 const CAM_ELEVATION_DEG: f32 = 30.0;
 const CAM_FOV_DEG: f32 = 30.0;
+const CAM_DISTANCE: f32 = 2.0; // 1.0 = Longest dimension of model
 
 fn locate_camera(bounds: &mesh::BoundingBox) -> mint::Point3<f32> {
     // Transform bounding box into camera space
@@ -104,6 +104,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         .with_visibility(config.visible);
     let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
+        //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
     let display = glium::Display::new(window, context, &events_loop).unwrap();
     //let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
     //    //.with_depth_buffer(24)
@@ -202,23 +203,23 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Draw
     // ----
 
-    {
-        let mut target = display.draw();
-        // Fills background color and clears depth buffer
-        target.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
-        target.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
-            .unwrap();
-        // TODO: Antialiasing
-        // TODO: Shadows
-        target.finish().unwrap();
-    }
+    // Create off screen texture to render to
+    let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+    let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+    let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+
+    // Fills background color and clears depth buffer
+    framebuffer.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
+    framebuffer.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
+        .unwrap();
+    // TODO: Antialiasing
+    // TODO: Shadows
 
     // Save Image
     // ==========
 
-    let (width, height) = display.get_framebuffer_dimensions();
-    let pixels: glium::texture::RawImage2d<u8> = display.read_front_buffer();
-    let img = image::ImageBuffer::from_raw(width, height, pixels.data.into_owned()).unwrap();
+    let pixels: glium::texture::RawImage2d<u8> = texture.read();
+    let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
     let img = image::DynamicImage::ImageRgba8(img).flipv();
     img.save(&config.img_filename)
         .expect("Error saving image");

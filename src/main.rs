@@ -21,4 +21,4 @@ fn main() {
 // https://wiki.archlinux.org/index.php/XDG_MIME_Applications#Shared_MIME_database
 // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en (outdated)
 // https://github.com/bwasty/gltf-viewer
-//
+// https://code.msdn.microsoft.com/windowsapps/CppShellExtThumbnailHandler-32399b35
