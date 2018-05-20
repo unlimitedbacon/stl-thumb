@@ -85,7 +85,6 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
     let stl_file = File::open(&config.stl_filename)?;
     let mesh = Mesh::from_stl(stl_file)?;
-    let center = mesh.bounds.center();
 
 
     // Graphics Stuff
@@ -158,17 +157,10 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // --------------
 
     // Transformation matrix (positions, scales and rotates model)
-    // TODO: Scale model to fit 1x1x1 box
-    let model = [
-        [0.01, 0.0, 0.0, 0.0],
-        [0.0, 0.01, 0.0, 0.0],
-        [0.0, 0.0, 0.01, 0.0],
-        [0.0, 0.0, 2.0, 1.0f32],
-    ];
+    let transform_matrix = mesh.scale_and_center();
 
     // View matrix (convert to positions relative to camera)
-    // TODO: Swap Y and Z axis
-    let view = view_matrix(&[2.0, 1.0, 1.0], &[-2.0, -1.0, 1.0], &[0.0, 1.0, 0.0]);
+    let view = view_matrix(&[2.0, 4.0, 2.0], &[-2.0, -4.0, -2.0], &[0.0, 0.0, 1.0]);
 
     // Perspective matrix (give illusion of depth)
     let perspective = {
@@ -193,7 +185,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let light = [-1.4, 0.4, -0.7f32];
 
     let uniforms = uniform! {
-        model: model,
+        model: Into::<[[f32; 4]; 4]>::into(transform_matrix),
         view: view,
         perspective: perspective,
         u_light: light,

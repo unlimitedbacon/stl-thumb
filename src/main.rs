@@ -17,8 +17,22 @@ fn main() {
 
 // Notes
 // =====
+//
+// Linux Thumbnails
+// ----------------
 // https://tecnocode.co.uk/2013/10/21/writing-a-gnome-thumbnailer/
 // https://wiki.archlinux.org/index.php/XDG_MIME_Applications#Shared_MIME_database
 // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en (outdated)
-// https://github.com/bwasty/gltf-viewer
+//
+// Window Thumbnails
+// -----------------
 // https://code.msdn.microsoft.com/windowsapps/CppShellExtThumbnailHandler-32399b35
+//
+// Helpful Examples
+// ----------------
+// https://github.com/bwasty/gltf-viewer
+//
+// OpenGL
+// ------
+// https://glium-doc.github.io/#/
+// http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/

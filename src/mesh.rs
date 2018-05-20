@@ -155,6 +155,29 @@ impl Mesh {
             });
         }
     }
+
+    // Move the mesh to be centered at the origin
+    // and scaled to fit a 2 x 2 x 2 box. This means that
+    // all coordinates will be between -1.0 and 1.0
+    pub fn scale_and_center(&self) -> cgmath::Matrix4<f32> {
+        // Move center to origin
+        let center = self.bounds.center();
+        let translation_vector = cgmath::Vector3::new(
+            -center.x,
+            -center.y,
+            -center.z,
+        );
+        let translation_matrix = cgmath::Matrix4::from_translation(translation_vector);
+        // Scale
+        let longest = self.bounds.length()
+            .max(self.bounds.width())
+            .max(self.bounds.height());
+        let scale = 2.0 / longest;
+        println!("Scale: {}",scale);
+        let scale_matrix = cgmath::Matrix4::from_scale(scale);
+        let matrix = scale_matrix * translation_matrix;
+        matrix
+    }
 }
 
 impl fmt::Display for Mesh {
