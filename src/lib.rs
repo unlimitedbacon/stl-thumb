@@ -227,21 +227,40 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Wait until window is closed
     // ===========================
 
-    //let mut closed = false;
-    //let sleep_time = time::Duration::from_millis(10);
-    //while !closed {
-    //    thread::sleep(sleep_time);
-    //    // Listing the events produced by the application and waiting to be received
-    //    events_loop.poll_events(|ev| {
-    //        match ev {
-    //            glutin::Event::WindowEvent { event, .. } => match event {
-    //                glutin::WindowEvent::Closed => closed = true,
-    //                _ => (),
-    //            },
-    //            _ => (),
-    //        }
-    //    });
-    //}
+    if config.visible {
+        let mut closed = false;
+        let sleep_time = time::Duration::from_millis(10);
+        while !closed {
+            thread::sleep(sleep_time);
+            // Copy framebuffer to display
+            let target = display.draw();
+            target.blit_from_simple_framebuffer(&framebuffer,
+                                                &glium::Rect {
+                                                    left: 0,
+                                                    bottom: 0,
+                                                    width: config.width,
+                                                    height: config.height,
+                                                },
+                                                &glium::BlitTarget {
+                                                    left: 0,
+                                                    bottom: 0,
+                                                    width: config.width as i32,
+                                                    height: config.height as i32,
+                                                },
+                                                glium::uniforms::MagnifySamplerFilter::Nearest);
+            target.finish().unwrap();
+            // Listing the events produced by the application and waiting to be received
+            events_loop.poll_events(|ev| {
+                match ev {
+                    glutin::Event::WindowEvent { event, .. } => match event {
+                        glutin::WindowEvent::Closed => closed = true,
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            });
+        }
+    }
 
     //let mut window = three::Window::new(env!("CARGO_PKG_NAME"));
     //window.scene.background = three::Background::Color(0xFFFFFF);
@@ -314,6 +333,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     Ok(())
 }
 
+// TODO: Move tests to their own file
 #[cfg(test)]
 mod tests {
     use std::fs;
