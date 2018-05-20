@@ -94,7 +94,6 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create GL context
     // -----------------
 
-    // TODO: -v option to switch between window and headless rendering
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new()
         .with_title("stl-thumb")
@@ -221,7 +220,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let pixels: glium::texture::RawImage2d<u8> = texture.read();
     let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
     let img = image::DynamicImage::ImageRgba8(img).flipv();
-    img.save(&config.img_filename)
+    let mut output = std::fs::File::create(&config.img_filename).unwrap();
+    img.write_to(&mut output, image::ImageFormat::PNG)
         .expect("Error saving image");
 
     // Wait until window is closed
@@ -343,8 +343,11 @@ mod tests {
     #[test]
     fn cube() {
         let config = Config {
-            stl_filename: "cube.stl".to_string(),
+            stl_filename: "test_data/cube.stl".to_string(),
             img_filename: "cube.png".to_string(),
+            width: 1024,
+            height: 768,
+            visible: false,
         };
 
         match fs::remove_file(&config.img_filename) {

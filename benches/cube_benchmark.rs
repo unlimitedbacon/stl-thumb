@@ -3,12 +3,15 @@ extern crate criterion;
 extern crate stl_thumb;
 
 use criterion::Criterion;
-use stl_thumb::Config;
+use stl_thumb::config::Config;
 
 fn cube() {
     let config = Config {
-        stl_filename: "cube.stl".to_string(),
+        stl_filename: "test_data/cube.stl".to_string(),
         img_filename: "cube.png".to_string(),
+        width: 1024,
+        height: 768,
+        visible: false,
     };
 
     stl_thumb::run(&config).expect("Error in run function");
