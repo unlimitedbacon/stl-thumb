@@ -7,10 +7,9 @@ out vec4 color;
 
 uniform vec3 u_light;
 
-// TODO: Send colors through uniforms
-const vec3 ambient_color = vec3(0.2, 0.0, 0.0);
-const vec3 diffuse_color = vec3(0.6, 0.0, 0.0);
-const vec3 specular_color = vec3(1.0, 1.0, 1.0);
+uniform vec3 ambient_color;
+uniform vec3 diffuse_color;
+uniform vec3 specular_color;
 
 void main() {
     float diffuse = max(dot(normalize(v_normal), normalize(u_light)), 0.0);

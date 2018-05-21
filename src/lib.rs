@@ -11,7 +11,7 @@ use std::error::Error;
 use std::fs::File;
 use std::{thread, time};
 use config::Config;
-use cgmath::EuclideanSpace;
+use cgmath::{EuclideanSpace, InnerSpace};
 use glium::{glutin, Surface};
 use mesh::Mesh;
 
@@ -21,28 +21,17 @@ const CAM_FOV_DEG: f32 = 30.0;
 const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: 4.0, z: 2.0};
 
 
+struct Material {
+    ambient: [f32; 3],
+    diffuse: [f32; 3],
+    specular: [f32; 3],
+}
+
+
 fn view_matrix(position: cgmath::Point3<f32>, direction: cgmath::Vector3<f32>, up: cgmath::Vector3<f32>) -> [[f32; 4]; 4] {
-    // TODO: Use matrix math in here
-    let f = {
-        let f = direction;
-        let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
-        let len = len.sqrt();
-        [f[0] / len, f[1] / len, f[2] / len]
-    };
-
-    let s = [up[1] * f[2] - up[2] * f[1],
-             up[2] * f[0] - up[0] * f[2],
-             up[0] * f[1] - up[1] * f[0]];
-
-    let s_norm = {
-        let len = s[0] * s[0] + s[1] * s[1] + s[2] * s[2];
-        let len = len.sqrt();
-        [s[0] / len, s[1] / len, s[2] / len]
-    };
-
-    let u = [f[1] * s_norm[2] - f[2] * s_norm[1],
-             f[2] * s_norm[0] - f[0] * s_norm[2],
-             f[0] * s_norm[1] - f[1] * s_norm[0]];
+    let f = direction.normalize();
+    let s_norm = f.cross(-up).normalize();
+    let u = s_norm.cross(-f);
 
     let p = [-position[0] * s_norm[0] - position[1] * s_norm[1] - position[2] * s_norm[2],
              -position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
@@ -143,6 +132,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let view = view_matrix(CAM_POSITION, cgmath::Point3::origin()-CAM_POSITION, cgmath::Vector3::unit_z());
 
     // Perspective matrix (give illusion of depth)
+    // TODO: Figure out how to use cgmath for this
     let perspective = {
         let (width, height) = (config.width, config.height);
         let aspect_ratio = height as f32 / width as f32;
@@ -162,13 +152,23 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     };
 
     // Direction of light source
-    let light = [-1.4, 0.4, -0.7f32];
+    let light_dir = [-1.4, 0.4, -0.7f32];
+
+    // Colors of object
+    let colors = Material {
+        ambient: [0.0, 0.0, 0.6],
+        diffuse: [0.0, 0.6, 1.0],
+        specular: [1.0, 1.0, 1.0],
+    };
 
     let uniforms = uniform! {
         model: Into::<[[f32; 4]; 4]>::into(transform_matrix),
         view: view,
         perspective: perspective,
-        u_light: light,
+        u_light: light_dir,
+        ambient_color: colors.ambient,
+        diffuse_color: colors.diffuse,
+        specular_color: colors.specular,
     };
 
     // Draw
@@ -205,6 +205,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         while !closed {
             thread::sleep(sleep_time);
             // Copy framebuffer to display
+            // TODO: I think theres some screwy srgb stuff going on here
             let target = display.draw();
             target.blit_from_simple_framebuffer(&framebuffer,
                                                 &glium::Rect {
@@ -234,76 +235,9 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         }
     }
 
-    //let mut window = three::Window::new(env!("CARGO_PKG_NAME"));
-    //window.scene.background = three::Background::Color(0xFFFFFF);
-
-    //println!("== STL ==");
-    //mesh.debug();
-    //let material = three::material::Phong {
-    //    color: 0x00A0ff,
-    //    glossiness: 80.0,
-    //};
-    //let mesh = window.factory.mesh(geometry, material);
-    //window.scene.add(&mesh);
-
-    ////let camera = window.factory.orthographic_camera(cam_center, yextent, zrange);
-    //let camera = window.factory.perspective_camera(CAM_FOV_DEG, 1.0..500.0);
-    ////let cam_pos = [150.0, -150.0, 150.0];
-    //let cam_pos = locate_camera(&bounds);
-    //camera.set_position(cam_pos);
-    //camera.look_at(cam_pos, center, None);
-
-    // Plane
-    //let plane = {
-    //    let geometry = Geometry::plane(
-    //        (bounds.max.x - bounds.min.x) * 3.0,
-    //        (bounds.max.y - bounds.min.y) * 3.0,
-    //    );
-    //    let material = three::material::Lambert {
-    //        //color: 0xA0ffA0,
-    //        color: 0xffffff,
-    //        flat: false,
-    //    };
-    //    window.factory.mesh(geometry, material)
-    //};
-    //plane.set_position([center[0], center[1], bounds.min.z]);
-    //window.scene.add(&plane);
-
-    // Test sphere
-    //let sphere = {
-    //    let geometry = Geometry::uv_sphere(40.0, 20, 20);
-    //    println!("== Sphere ==");
-    //    debug_geo(&geometry);
-    //    let material = three::material::Phong {
-    //        color: 0xffA0A0,
-    //        glossiness: 80.0,
-    //    };
-    //    window.factory.mesh(geometry, material)
-    //};
-    //sphere.set_position([30.0, 40.0, 2.5]);
-    //window.scene.add(&sphere);
-
-    // Lights
-    //let hemisphere_light = window.factory.hemisphere_light(0xffffff, 0x8080ff, 0.5);
-    //window.scene.add(&hemisphere_light);
-    // TODO: Change dir_light position and shadow map size based on size of object
-    //let mut dir_light = window.factory.directional_light(0xffffff, 0.9);
-    //dir_light.look_at([-100.0, -400.0, 350.0], [0.0, 0.0, 0.0], None);
-    //let shadow_map = window.factory.shadow_map(2048, 2048);
-    //dir_light.set_shadow(shadow_map, 400.0, 1.0..1000.0);
-    //window.scene.add(&dir_light);
-    //let ambient_light = window.factory.ambient_light(0xdc8874, 0.5);
-    //window.scene.add(ambient_light);
-    //let point_light = window.factory.point_light(0xffffff, 0.5);
-    //point_light.set_position([150.0, 350.0, 350.0]);
-    //window.scene.add(point_light);
-
-    //while window.update() {
-    //    window.render(&camera);
-    //}
-
     Ok(())
 }
+
 
 // TODO: Move tests to their own file
 #[cfg(test)]
