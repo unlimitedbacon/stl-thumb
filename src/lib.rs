@@ -11,37 +11,17 @@ use std::error::Error;
 use std::fs::File;
 use std::{thread, time};
 use config::Config;
-use cgmath::Rotation;
+use cgmath::EuclideanSpace;
 use glium::{glutin, Surface};
 use mesh::Mesh;
 
 // TODO: Move this stuff to config module
 const BACKGROUND_COLOR: (f32, f32, f32, f32) = (1.0, 1.0, 1.0, 0.0);
-const CAM_AZIMUTH_DEG: f32 = -60.0;
-const CAM_ELEVATION_DEG: f32 = 30.0;
 const CAM_FOV_DEG: f32 = 30.0;
-const CAM_DISTANCE: f32 = 2.0; // 1.0 = Longest dimension of model
+const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: 4.0, z: 2.0};
 
-fn locate_camera(bounds: &mesh::BoundingBox) -> mint::Point3<f32> {
-    // Transform bounding box into camera space
-    let p1 = bounds.max - bounds.center();
-    let rot: cgmath::Basis2<f32> = cgmath::Rotation2::from_angle(cgmath::Deg(-CAM_AZIMUTH_DEG));
-    let p2 = rot.rotate_vector(cgmath::Vector2{
-        x: p1.x,
-        y: p1.y,
-    });
-    // TODO: three-rs uses vertical FOV but we are using horizontal FOV here.
-    // Adjust accordingly.
-    let d = p2.y / (CAM_FOV_DEG.to_radians()/2.0).tan() + p2.x;
-    mint::Point3 {
-        x: d * CAM_AZIMUTH_DEG.to_radians().cos() + bounds.center().x,
-        y: d * CAM_AZIMUTH_DEG.to_radians().sin() + bounds.center().y,
-        z: d * CAM_ELEVATION_DEG.to_radians().tan() + bounds.center().z,
-    }
-    // TODO: Account for object that are taller than wide
-}
 
-fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
+fn view_matrix(position: cgmath::Point3<f32>, direction: cgmath::Vector3<f32>, up: cgmath::Vector3<f32>) -> [[f32; 4]; 4] {
     // TODO: Use matrix math in here
     let f = {
         let f = direction;
@@ -160,7 +140,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let transform_matrix = mesh.scale_and_center();
 
     // View matrix (convert to positions relative to camera)
-    let view = view_matrix(&[2.0, 4.0, 2.0], &[-2.0, -4.0, -2.0], &[0.0, 0.0, 1.0]);
+    let view = view_matrix(CAM_POSITION, cgmath::Point3::origin()-CAM_POSITION, cgmath::Vector3::unit_z());
 
     // Perspective matrix (give illusion of depth)
     let perspective = {
