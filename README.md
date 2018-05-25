@@ -9,7 +9,7 @@ $ stl-thumb <STL_FILE> <IMG_FILE>
 ```
 
 ### Options
-| Option    | Description                                             |
-| --------- | ------------------------------------------------------- |
-| -s <size> | Specify width of the image. It will always be a square. |
-| -v        | Show a preview.                                         |
+| Option      | Description                                             |
+| ----------- | ------------------------------------------------------- |
+| -s \<size\> | Specify width of the image. It will always be a square. |
+| -v          | Show a preview.                                         |
