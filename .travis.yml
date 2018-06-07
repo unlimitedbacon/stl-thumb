@@ -1,2 +1,6 @@
 language: rust
 cache: cargo
+script:
+    - cargo build --verbose
+    # Disable testing for now until headless context is working
+    # - cargo test --verbose
