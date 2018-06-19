@@ -97,7 +97,7 @@ impl Mesh {
     pub fn from_stl(mut stl_file: File) -> Result<Mesh, Box<Error>> {
         //let stl = stl_io::read_stl(&mut stl_file)?;
         //println!("{:?}", stl);
-        let mut stl_iter = stl_io::create_stl_reader(&mut stl_file).unwrap();
+        let mut stl_iter = stl_io::create_stl_reader(&mut stl_file)?;
 
         // Get starting point for finding bounding box
         let t1 = stl_iter.next().unwrap().unwrap();
@@ -115,7 +115,7 @@ impl Mesh {
         face_count += 1;
 
         for triangle in stl_iter {
-            mesh.process_tri(&triangle.unwrap());
+            mesh.process_tri(&triangle?);
             face_count += 1;
             //println!("{:?}",triangle);
         }
@@ -194,6 +194,7 @@ impl fmt::Display for Mesh {
 // Calculate surface normal of triangle using cross product
 // TODO: The GPU can probably do this a lot faster than we can.
 // See if there is an option for offloading this.
+// Probably need to use a geometry shader (not supported in Opengl ES).
 fn normal(tri: &stl_io::Triangle) -> stl_io::Normal {
     let p1: cgmath::Vector3<f32> = tri.vertices[0].into();
     let p2: cgmath::Vector3<f32> = tri.vertices[1].into();
