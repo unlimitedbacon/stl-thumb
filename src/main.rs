@@ -27,6 +27,7 @@ fn main() {
 // Window Thumbnails
 // -----------------
 // https://code.msdn.microsoft.com/windowsapps/CppShellExtThumbnailHandler-32399b35
+// https://github.com/Arlorean/Voxels
 //
 // Helpful Examples
 // ----------------
