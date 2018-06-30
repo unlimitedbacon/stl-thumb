@@ -190,8 +190,6 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 	//LPCWSTR image_filename = L"C:\\Users\\Neo\\Desktop\\cube.png";
 	wchar_t command[MAX_PATH*3+6];
 
-	// TODO: Make sure that this will take paths with spaces
-	//swprintf_s(command, MAX_PATH*3+6, L"%s -s %u \"%s\" \"%s\" & pause", exe_path, cx, stl_filename, image_filename);
 	swprintf_s(command, MAX_PATH * 3 + 6, L"\"%s\" -s %u \"%s\" \"%s\"", exe_path, cx, stl_filename, image_filename);
 
 #ifdef _DEBUG
@@ -252,7 +250,7 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 
 	WaitForSingleObject(pi.hProcess, INFINITE);
 
-	// TODO: Return here if exit code != 0
+	// Clean up after execution
 	DWORD exitCode = 0;
 	GetExitCodeProcess(pi.hProcess, &exitCode);
 
@@ -262,7 +260,12 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 	CloseHandle(h);
 #endif
 
-	// TODO: Make sure that temp image file is deleted if errors happen
+	// Return here if stl-thumb.exe failed
+	if (exitCode != 0) {
+		DeleteFile(image_filename);
+		return E_FAIL;
+	}
+
 
 	// Load the image it created
 	// =========================
@@ -279,6 +282,7 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 
 	if (FAILED(hr)) {
 		return hr;
+		DeleteFile(image_filename);
 	}
 
 	// Create image decoder
@@ -294,6 +298,7 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 
 	if (FAILED(hr)) {
 		pIWICFactory->Release();
+		DeleteFile(image_filename);
 		return hr;
 	}
 
@@ -305,6 +310,7 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 	if (FAILED(hr)) {
 		pDecoder->Release();
 		pIWICFactory->Release();
+		DeleteFile(image_filename);
 		return hr;
 	}
 
