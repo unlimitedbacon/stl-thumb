@@ -194,15 +194,7 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 	//swprintf_s(command, MAX_PATH*3+6, L"%s -s %u \"%s\" \"%s\" & pause", exe_path, cx, stl_filename, image_filename);
 	swprintf_s(command, MAX_PATH * 3 + 6, L"\"%s\" -s %u \"%s\" \"%s\"", exe_path, cx, stl_filename, image_filename);
 
-
-	// Run stl-thumb on the file
-	//_putenv("RUST_BACKTRACE=1");
-	//int r = _wsystem(command);
-
-	//if (r != 0) {
-	//	return E_FAIL;
-	//}
-
+#ifdef _DEBUG
 	// Open file for logging stl-thumb output
 	//LPCWSTR log_path = L"C:\\Users\\Neo\\Desktop\\out.log";
 	wchar_t log_path[MAX_PATH];
@@ -220,6 +212,7 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 		OPEN_ALWAYS,
 		FILE_ATTRIBUTE_NORMAL,
 		NULL);
+#endif
 
 	// Launch the process
 	PROCESS_INFORMATION pi;
@@ -232,8 +225,13 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 	si.cb = sizeof(STARTUPINFO);
 	si.dwFlags |= STARTF_USESTDHANDLES;
 	si.hStdInput = NULL;
+#ifdef _DEBUG
 	si.hStdError = h;
 	si.hStdOutput = h;
+#else
+	si.hStdError = NULL;
+	si.hStdOutput = NULL;
+#endif
 
 	ret = CreateProcess(exe_path,
 		command,
@@ -260,7 +258,9 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+#ifdef _DEBUG
 	CloseHandle(h);
+#endif
 
 	// TODO: Make sure that temp image file is deleted if errors happen
 
