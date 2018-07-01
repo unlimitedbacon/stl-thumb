@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="stl-thumb" Language="1033" Version="0.1.0" Manufacturer="UnlimitedBacon" UpgradeCode="fcf12725-03f3-4dfb-9455-bc98fbfb0961">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64"/>
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate EmbedCab="yes"/>
+
+		<Feature Id="ProductFeature" Title="stl_thumb.Installer" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+
+    <!-- Refresh the thumbnail cache when install finishes -->
+    <InstallExecuteSequence>
+      <Custom Action="ShellNotifyAssociations" After="InstallFinalize" />
+    </InstallExecuteSequence>
+
+    <UIRef Id="WixUI_InstallDir" />
+    <WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFiles64Folder">
+				<Directory Id="INSTALLFOLDER" Name="stl-thumb" />
+			</Directory>
+		</Directory>
+  
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="stl_thumb.exe" Guid="16f8b8ad-417e-48d5-8474-d226e6bf7b9d" Win64="yes">
+        <File Id="stl_thumb.exe" Name="stl-thumb.exe" Source="$(var.SolutionDir)..\target\release\stl-thumb.exe" />
+      </Component>
+      <Component Id="STLThumbWinShellExtension.dll" Guid="1929088e-7b52-448e-bb60-306a335414de" Win64="yes">
+        <File Id="STLThumbWinShellExtension.dll" Name="STLThumbWinShellExtension.dll" Source="$(var.STLThumbWinShellExtension.TargetDir)STLThumbWinShellExtension.dll" />
+      </Component>
+      <Component Id="RegistryEntries" Guid="e22ec1a3-0af0-47e8-89da-1e114aa137c5" Win64="yes">
+        <!-- The CLSID comes from dllmain.cpp -->
+        <RegistryValue Root="HKCR" Key=".stl\shellex\{e357fccd-a995-4576-b01f-234630154e96}" Value="{AF07F051-9D08-44A7-8C63-9296ADFEDDD7}" Type="string" Action="write" />
+        <RegistryValue Root="HKCR" Key="CLSID\{AF07F051-9D08-44A7-8C63-9296ADFEDDD7}" Value="STLThumbWinShellExtension.STLThumbnailProvider Class" Type="string" Action="write" />
+        <!-- This is bad, but required since we don't use IInitializeWithStream. TODO: Make streams work. -->
+        <!-- https://msdn.microsoft.com/en-us/library/windows/desktop/cc144118(v=vs.85).aspx -->
+        <RegistryValue Root="HKCR" Key="CLSID\{AF07F051-9D08-44A7-8C63-9296ADFEDDD7}" Name="DisableProcessIsolation" Value="1" Type="integer" Action="write" />
+        <RegistryValue Root="HKCR" Key="CLSID\{AF07F051-9D08-44A7-8C63-9296ADFEDDD7}\InprocServer32" Value="[INSTALLFOLDER]STLThumbWinShellExtension.dll" Type="string" Action="write" />
+        <RegistryValue Root="HKCR" Key="CLSID\{AF07F051-9D08-44A7-8C63-9296ADFEDDD7}\InprocServer32" Name="ThreadingModel" Value="Apartment" Type="string" Action="write" />
+      </Component>
+		</ComponentGroup>
+	</Fragment>
+
+  <Fragment>
+    <!-- TODO: Move this to a seperate dll. I think it is causing the main dll to be included twice in the msi. -->
+    <CustomAction Id="ShellNotifyAssociations" BinaryKey="STLThumbnailProvider" DllEntry="DllNotifyShell" Execute="immediate" Return="check" />
+    <Binary Id="STLThumbnailProvider" SourceFile="$(var.STLThumbWinShellExtension.TargetDir)STLThumbWinShellExtension.dll" />
+  </Fragment>
+</Wix>
