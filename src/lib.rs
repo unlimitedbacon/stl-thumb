@@ -9,7 +9,7 @@ mod mesh;
 
 use std::error::Error;
 use std::fs::File;
-use std::{thread, time};
+use std::{io, thread, time};
 use config::Config;
 use cgmath::{EuclideanSpace, InnerSpace};
 use glium::{glutin, Surface};
@@ -192,7 +192,13 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let pixels: glium::texture::RawImage2d<u8> = texture.read();
     let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
     let img = image::DynamicImage::ImageRgba8(img).flipv();
-    let mut output = std::fs::File::create(&config.img_filename).unwrap();
+    // Write to stdout if user did not specify a file
+    let mut output: Box<io::Write> = match config.img_filename {
+        Some(ref x) => {
+            Box::new(std::fs::File::create(&x).unwrap())
+        },
+        None => Box::new(io::stdout()),
+    };
     img.write_to(&mut output, image::ImageFormat::PNG)
         .expect("Error saving image");
 

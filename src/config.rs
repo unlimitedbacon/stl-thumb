@@ -2,7 +2,7 @@ extern crate clap;
 
 pub struct Config {
     pub stl_filename: String,
-    pub img_filename: String,
+    pub img_filename: Option<String>,
     pub width: u32,
     pub height: u32,
     pub visible: bool,
@@ -23,7 +23,6 @@ impl Config {
             .arg(
                 clap::Arg::with_name("IMG_FILE")
                     .help("Thumbnail image")
-                    .required(true)
                     .index(2),
             )
             .arg(
@@ -43,7 +42,10 @@ impl Config {
             .get_matches();
 
         let stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
-        let img_filename = matches.value_of("IMG_FILE").unwrap().to_string();
+        let img_filename = match matches.value_of("IMG_FILE") {
+            Some(x) => Some(x.to_string()),
+            None => None,
+        };
         let width = matches.value_of("size").unwrap_or("1024");
         let height = matches.value_of("size").unwrap_or("768");
         let width = width.parse::<u32>()

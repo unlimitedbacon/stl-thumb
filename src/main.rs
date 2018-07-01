@@ -7,7 +7,10 @@ fn main() {
     let config = Config::new();
 
     println!("STL File: {}", config.stl_filename);
-    println!("Thumbnail File: {}", config.img_filename);
+    match config.img_filename {
+        Some(ref name) => println!("Thumbnail File: {}", &name),
+        None => println!("Output: stdout"),
+    };
 
     if let Err(e) = stl_thumb::run(&config) {
         println!("Application error: {}", e);
