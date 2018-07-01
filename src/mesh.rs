@@ -91,6 +91,7 @@ pub struct Mesh {
     pub normals: Vec<Normal>,
     pub indices: Vec<usize>,
     pub bounds: BoundingBox,
+    stl_had_normals: bool,
 }
 
 impl Mesh {
@@ -108,6 +109,7 @@ impl Mesh {
             normals: Vec::new(),
             indices: Vec::new(),
             bounds: BoundingBox::new(&v1),
+            stl_had_normals: true,
         };
 
         let mut face_count = 0;
@@ -120,6 +122,9 @@ impl Mesh {
             //println!("{:?}",triangle);
         }
 
+        if !mesh.stl_had_normals {
+            println!("File missing surface normals");
+        }
         println!("Bounds:");
         println!("{}",mesh.bounds);
         println!("Center:");
@@ -142,7 +147,7 @@ impl Mesh {
         // Use normal from STL file if it is provided, otherwise calculate it ourselves
         let n: stl_io::Normal;
         if tri.normal == [0.0, 0.0, 0.0] {
-            println!("Calculating surface normal");
+            self.stl_had_normals = false;
             n = normal(&tri);
         } else {
             n = tri.normal;
