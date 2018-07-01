@@ -2,6 +2,8 @@ extern crate cgmath;
 #[macro_use]
 extern crate glium;
 extern crate image;
+#[macro_use]
+extern crate log;
 extern crate mint;
 
 pub mod config;
@@ -79,12 +81,12 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     //let display = glium::HeadlessRenderer::new(context).unwrap();
 
     // Print context information
-    println!("GL Version:   {:?}", display.get_opengl_version());
-    println!("GL Version:   {}", display.get_opengl_version_string());
-    println!("GLSL Version: {:?}", display.get_supported_glsl_version());
-    println!("Vendor:       {}", display.get_opengl_vendor_string());
-    println!("Renderer      {}", display.get_opengl_renderer_string());
-    println!("Free GPU Mem: {:?}", display.get_free_video_memory());
+    info!("GL Version:   {:?}", display.get_opengl_version());
+    info!("GL Version:   {}", display.get_opengl_version_string());
+    info!("GLSL Version: {:?}", display.get_supported_glsl_version());
+    info!("Vendor:       {}", display.get_opengl_vendor_string());
+    info!("Renderer      {}", display.get_opengl_renderer_string());
+    info!("Free GPU Mem: {:?}\n", display.get_free_video_memory());
 
 
     let params = glium::DrawParameters {
@@ -108,7 +110,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let program = match program {
         Ok(p) => p,
         Err(glium::CompilationError(err)) => {
-            eprintln!("{}",err);
+            error!("{}",err);
             panic!("Compiling shaders");
         },
         Err(err) => panic!("{}",err),

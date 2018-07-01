@@ -9,7 +9,7 @@ Thumbnail generator for STL files.
 ## Usage
 
 ```
-$ stl-thumb <STL_FILE> <IMG_FILE>
+$ stl-thumb <STL_FILE> [IMG_FILE]
 ```
 
 ### Options
@@ -17,7 +17,7 @@ $ stl-thumb <STL_FILE> <IMG_FILE>
 | Option      | Description                                             |
 | ----------- | ------------------------------------------------------- |
 | -s \<size\> | Specify width of the image. It will always be a square. |
-| -v          | Show a preview.                                         |
+| -x          | Show a preview.                                         |
 
 ## Installation
 

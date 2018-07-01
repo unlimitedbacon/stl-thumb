@@ -6,6 +6,7 @@ pub struct Config {
     pub width: u32,
     pub height: u32,
     pub visible: bool,
+    pub verbosity: usize,
 }
 
 impl Config {
@@ -22,7 +23,7 @@ impl Config {
             )
             .arg(
                 clap::Arg::with_name("IMG_FILE")
-                    .help("Thumbnail image")
+                    .help("Thumbnail image file. If this is omitted, the image data will be dumped to stdout.")
                     .index(2),
             )
             .arg(
@@ -36,8 +37,14 @@ impl Config {
             .arg(
                 clap::Arg::with_name("visible")
                     .help("Display the thumbnail in a window")
-                    .short("v")
+                    .short("x")
                     .required(false)
+            )
+            .arg(
+                clap::Arg::with_name("verbosity")
+                    .short("v")
+                    .multiple(true)
+                    .help("Increase message verbosity")
             )
             .get_matches();
 
@@ -53,6 +60,7 @@ impl Config {
         let height = height.parse::<u32>()
             .expect("Invalid size");
         let visible = matches.is_present("visible");
+        let verbosity = matches.occurrences_of("verbosity") as usize;
 
         Config {
             stl_filename,
@@ -60,6 +68,7 @@ impl Config {
             width,
             height,
             visible,
+            verbosity,
         }
     }
 }

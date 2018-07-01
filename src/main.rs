@@ -1,3 +1,7 @@
+#[macro_use]
+extern crate log;
+extern crate stderrlog;
+
 extern crate stl_thumb;
 
 use std::process;
@@ -6,14 +10,22 @@ use stl_thumb::config::Config;
 fn main() {
     let config = Config::new();
 
-    println!("STL File: {}", config.stl_filename);
+    stderrlog::new()
+        .module(module_path!())
+        //.quiet(config.quiet)
+        .verbosity(config.verbosity)
+        //.timestamp(config.timestamp)
+        .init()
+        .unwrap();
+
+    info!("STL File: {}", config.stl_filename);
     match config.img_filename {
-        Some(ref name) => println!("Thumbnail File: {}", &name),
-        None => println!("Output: stdout"),
+        Some(ref name) => info!("Thumbnail File: {}\n", &name),
+        None => info!("Output: stdout\n"),
     };
 
     if let Err(e) = stl_thumb::run(&config) {
-        println!("Application error: {}", e);
+        error!("Application error: {}", e);
         process::exit(1);
     }
 }

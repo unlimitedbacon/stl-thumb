@@ -97,7 +97,7 @@ pub struct Mesh {
 impl Mesh {
     pub fn from_stl(mut stl_file: File) -> Result<Mesh, Box<Error>> {
         //let stl = stl_io::read_stl(&mut stl_file)?;
-        //println!("{:?}", stl);
+        //debug!("{:?}", stl);
         let mut stl_iter = stl_io::create_stl_reader(&mut stl_file)?;
 
         // Get starting point for finding bounding box
@@ -119,19 +119,16 @@ impl Mesh {
         for triangle in stl_iter {
             mesh.process_tri(&triangle?);
             face_count += 1;
-            //println!("{:?}",triangle);
+            //debug!("{:?}",triangle);
         }
 
         if !mesh.stl_had_normals {
-            println!("File missing surface normals");
+            warn!("STL file missing surface normals");
         }
-        println!("Bounds:");
-        println!("{}",mesh.bounds);
-        println!("Center:");
-        println!("{:?}", mesh.bounds.center());
-        println!("Triangles processed:");
-        println!("{}", face_count);
-        println!();
+        info!("Bounds:");
+        info!("{}",mesh.bounds);
+        info!("Center:\t{:?}", mesh.bounds.center());
+        info!("Triangles processed:\t{}\n", face_count);
 
         Ok(mesh)
     }
@@ -142,7 +139,7 @@ impl Mesh {
             self.vertices.push( Vertex {
                 position: *v,
             });
-            //println!("{:?}", v);
+            //debug!("{:?}", v);
         }
         // Use normal from STL file if it is provided, otherwise calculate it ourselves
         let n: stl_io::Normal;
@@ -152,7 +149,7 @@ impl Mesh {
         } else {
             n = tri.normal;
         }
-        //println!("{:?}",tri.normal);
+        //debug!("{:?}",tri.normal);
         // TODO: Figure out how to get away with 1 normal instead of 3
         for _ in 0..3 {
             self.normals.push( Normal{
@@ -178,7 +175,7 @@ impl Mesh {
             .max(self.bounds.width())
             .max(self.bounds.height());
         let scale = 2.0 / longest;
-        println!("Scale: {}",scale);
+        info!("Scale:\t{}",scale);
         let scale_matrix = cgmath::Matrix4::from_scale(scale);
         let matrix = scale_matrix * translation_matrix;
         matrix
