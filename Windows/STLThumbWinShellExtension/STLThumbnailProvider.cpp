@@ -47,7 +47,8 @@ extern long g_cDllRef;
 // Initialize member data
 STLThumbnailProvider::STLThumbnailProvider()
 	:
-	m_cRef(1)
+	m_cRef(1),
+	initialized(false)
 {
     InterlockedIncrement(&g_cDllRef);
 }
@@ -119,8 +120,13 @@ IFACEMETHODIMP_(ULONG) STLThumbnailProvider::Release()
 // Initializes the thumbnail handler with a file path.
 IFACEMETHODIMP STLThumbnailProvider::Initialize(LPCWSTR pszFilePath, DWORD grfMode)
 {
-	stl_filename = pszFilePath;
-	return S_OK;
+	HRESULT hr = HRESULT_FROM_WIN32(ERROR_ALREADY_INITIALIZED);
+	if (!initialized)
+	{
+		hr = wcscpy_s(stl_filename, pszFilePath);
+		initialized = true;
+	}
+	return hr;
 }
 
 #pragma endregion
@@ -188,9 +194,14 @@ IFACEMETHODIMP STLThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp,
 
 	//LPCWSTR exe_path = L"C:\\Users\\Neo\\Desktop\\stl-thumb\\target\\debug\\stl-thumb.exe";
 	//LPCWSTR image_filename = L"C:\\Users\\Neo\\Desktop\\cube.png";
-	wchar_t command[MAX_PATH*3+6];
+	wchar_t command[MAX_PATH*3+20];
+#ifdef _DEBUG
+	const wchar_t *command_format = L"\"%s\" -vv -s %u \"%s\" \"%s\"";
+#else
+	const wchar_t *command_format = L"\"%s\" -s %u \"%s\" \"%s\"";
+#endif
 
-	swprintf_s(command, MAX_PATH * 3 + 6, L"\"%s\" -s %u \"%s\" \"%s\"", exe_path, cx, stl_filename, image_filename);
+	swprintf_s(command, MAX_PATH * 3 + 20, command_format, exe_path, cx, stl_filename, image_filename);
 
 #ifdef _DEBUG
 	// Open file for logging stl-thumb output

@@ -68,7 +68,9 @@ private:
     long m_cRef;
 
     // Provided during initialization.
-	LPCWSTR stl_filename;
+	bool initialized;
+	wchar_t stl_filename[MAX_PATH];
+	//LPCWSTR *stl_filename = stl_filename_data;
 
 	HRESULT ConvertBitmapSourceTo32bppHBITMAP(
 		IWICBitmapSource *pBitmapSource,
