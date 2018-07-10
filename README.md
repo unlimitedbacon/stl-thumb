@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/unlimitedbacon/stl-thumb.svg?branch=master)](https://travis-ci.org/unlimitedbacon/stl-thumb)
 
-stl-thumb is a fast lightweight thumbnail generator for STL files. It is written in Rust and uses OpenGL. It works with file managers on Linux and Windows.
+Stl-thumb is a fast lightweight thumbnail generator for STL files. It can show previews for STL files in your file manager on Linux and Windows. It is written in Rust and uses OpenGL.
 
 ![Screenshot](https://user-images.githubusercontent.com/3131268/42529042-31d9bca6-8432-11e8-9ba8-87d9b72aaddb.png)
 
