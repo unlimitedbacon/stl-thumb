@@ -6,6 +6,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "STLThumbWinShellExtension",
 EndProject
 Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "STLThumbInstaller", "STLThumbInstaller\STLThumbInstaller.wixproj", "{517A2D82-F15E-4903-847C-06BB23CF57E8}"
 EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "STLThumbSetupBundle", "STLThumbSetupBundle\STLThumbSetupBundle.wixproj", "{86D4C1A7-9C64-4325-A344-E3D53FA617F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -29,6 +31,13 @@ Global
 		{517A2D82-F15E-4903-847C-06BB23CF57E8}.Release|Win32.Build.0 = Release|x86
 		{517A2D82-F15E-4903-847C-06BB23CF57E8}.Release|x64.ActiveCfg = Release|x86
 		{517A2D82-F15E-4903-847C-06BB23CF57E8}.Release|x64.Build.0 = Release|x86
+		{86D4C1A7-9C64-4325-A344-E3D53FA617F6}.Debug|Win32.ActiveCfg = Debug|x86
+		{86D4C1A7-9C64-4325-A344-E3D53FA617F6}.Debug|Win32.Build.0 = Debug|x86
+		{86D4C1A7-9C64-4325-A344-E3D53FA617F6}.Debug|x64.ActiveCfg = Debug|x86
+		{86D4C1A7-9C64-4325-A344-E3D53FA617F6}.Release|Win32.ActiveCfg = Release|x86
+		{86D4C1A7-9C64-4325-A344-E3D53FA617F6}.Release|Win32.Build.0 = Release|x86
+		{86D4C1A7-9C64-4325-A344-E3D53FA617F6}.Release|x64.ActiveCfg = Release|x86
+		{86D4C1A7-9C64-4325-A344-E3D53FA617F6}.Release|x64.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

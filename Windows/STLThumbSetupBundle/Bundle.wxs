@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+  xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+  xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+  <Bundle
+    Name="STL-Thumb"
+    Version="0.1.0"
+    Manufacturer="UnlimitedBacon"
+    Copyright="© 2018 UnlimitedBacon"
+    AboutUrl="https://github.com/unlimitedbacon/stl-thumb"
+    UpgradeCode="23bbe3a4-caa1-41fd-955a-22306099325c"
+    Condition="VersionNT >= v5.1">
+
+    <BootstrapperApplicationRef
+      Id="WixStandardBootstrapperApplication.RtfLargeLicense">
+      <bal:WixStandardBootstrapperApplication
+        LicenseFile="LICENSE.rtf"
+        LicenseUrl="https://github.com/unlimitedbacon/stl-thumb/blob/master/LICENSE"
+        LogoFile="logo.png"
+        ShowVersion="yes"
+        SuppressOptionsUI="no" />
+    </BootstrapperApplicationRef>
+
+    <Variable Name="InstallFolder" Type="string" Value="[ProgramFiles64Folder]stl-thumb"/>
+
+    <!-- v6.0 Service Pack 2 -->
+    <bal:Condition Message="This application requires Service Pack 2 for Windows Vista / Server 2008.">
+      <![CDATA[NOT (VersionNT = v6.0 AND ServicePackLevel < 2)]]>
+    </bal:Condition>
+
+    <!-- v6.1 Service Pack 1 -->
+    <bal:Condition Message="This application requires Service Pack 1 for Windows 7 / Server 2008 R2.">
+      <![CDATA[NOT (VersionNT = v6.1 AND ServicePackLevel < 1)]]>
+    </bal:Condition>
+
+    <!-- v6.3 KB2919355 -->
+    <util:FileSearch
+      Id="HAL.DLL"
+      Path="[WindowsFolder]System32\hal.dll"
+      Result="version"
+      Variable="NT603HALVER"
+      Condition="VersionNT = v6.3" />
+    <bal:Condition Message="This application requires S14 Update (KB2919355) for Windows 8.1 / Server 2012 R2.">
+      <![CDATA[NOT (VersionNT = v6.3 AND NT603HALVER < v6.3.9600.17031)]]>
+    </bal:Condition>
+
+    <!-- Visual C++ 2015 Redistributable (x64) minimum runtime msi package version -->
+    <util:ProductSearch
+      Id="VCRedist2015x64"
+      Result="version"
+      Variable="VCRedist2015x64"
+      UpgradeCode="36F68A90-239C-34DF-B58C-64B30153CE35"
+      Condition="VersionNT64" />
+
+    <!-- Visual C++ 2015 Redistributable (x86) minimum runtime msi package version -->
+    <!--<util:ProductSearch
+      Id="VCRedist2015x86"
+      Result="version"
+      Variable="VCRedist2015x86"
+      UpgradeCode="65E5BD06-6392-3027-8C26-853107D3CF1A"
+      Condition="VersionNT" />-->
+
+    <!-- Visual C++ 2015 Redistributable version -->
+    <Variable Name="VCRedist2015" Type="version" Value="14.0.24215" />
+
+    <Chain>
+
+      <!-- use heat command to get RemotePayload attributes -->
+      <!-- example: heat payload vc_redist.x64.exe -o x64.wxs -->
+
+      <!-- Visual C++ 2015 Redistributable Update 3 (x64) -->
+      <ExePackage
+        Id="vc_redist.x64.exe"
+        Name="vc_redist.x64.14.0.24215.1.exe"
+        DisplayName="Microsoft Visual C++ 2015 Redistributable (x64) - 14.0.24215"
+        Cache="no"
+        Compressed="no"
+        PerMachine="yes"
+        Permanent="yes"
+        InstallCondition="VersionNT64"
+        DetectCondition="VCRedist2015x64 >= VCRedist2015"
+        DownloadUrl="https://download.microsoft.com/download/6/A/A/6AA4EDFF-645B-48C5-81CC-ED5963AEAD48/vc_redist.x64.exe"
+        InstallCommand="/install /quiet /norestart"
+        RepairCommand="/repair /quiet /norestart"
+        UninstallCommand="/uninstall /quiet /norestart" >
+        <RemotePayload
+          ProductName="Visual C++ 2015 Redistributable Update 3 (x64)"
+          Version="14.0.24215.1"
+          Description="https://www.microsoft.com/en-us/download/details.aspx?id=53840"
+          CertificatePublicKey="371DD003A37769487A2A89A5A9DDB3026451B906"
+          CertificateThumbprint="98ED99A67886D020C564923B7DF25E9AC019DF26"
+          Hash="10B1683EA3FF5F36F225769244BF7E7813D54AD0"
+          Size="15301888" />
+      </ExePackage>
+
+      <!-- Visual C++ 2015 Redistributable Update 3 (x86) -->
+      <!--<ExePackage
+        Id="vc_redist.x86.exe"
+        Name="vc_redist.x86.14.0.24215.1.exe"
+        DisplayName="Microsoft Visual C++ 2015 Redistributable (x86) - 14.0.24215"
+        Cache="no"
+        Compressed="no"
+        PerMachine="yes"
+        Permanent="yes"
+        InstallCondition="VersionNT"
+        DetectCondition="VCRedist2015x86 >= VCRedist2015"
+        DownloadUrl="https://download.microsoft.com/download/6/A/A/6AA4EDFF-645B-48C5-81CC-ED5963AEAD48/vc_redist.x86.exe"
+        InstallCommand="/install /quiet /norestart"
+        RepairCommand="/repair /quiet /norestart"
+        UninstallCommand="/uninstall /quiet /norestart" >
+        <RemotePayload
+          ProductName="Visual C++ 2015 Redistributable Update 3 (x86)"
+          Version="14.0.24215.1"
+          Description="https://www.microsoft.com/en-us/download/details.aspx?id=53840"
+          CertificatePublicKey="371DD003A37769487A2A89A5A9DDB3026451B906"
+          CertificateThumbprint="98ED99A67886D020C564923B7DF25E9AC019DF26"
+          Hash="72211BD2E7DFC91EA7C8FAC549C49C0543BA791B"
+          Size="14456872" />
+      </ExePackage>-->
+
+      <!-- x86 modules -->
+      <!--<MsiPackage
+        Id="X86"
+        DisplayName="x86 modules"
+        ForcePerMachine="yes"
+        Compressed="yes"
+        SourceFile="x86.msi"
+        InstallCondition="VersionNT" />-->
+
+      <!-- x64 modules -->
+      <MsiPackage
+        Id="X64"
+        DisplayName="STL-Thumb Shell Extension"
+        DisplayInternalUI="no"
+        ForcePerMachine="yes"
+        Compressed="yes"
+        SourceFile="$(var.STLThumbInstaller.TargetDir)STLThumbInstaller.msi"
+        InstallCondition="VersionNT64" >
+
+        <MsiProperty Name="INSTALLFOLDER" Value="[InstallFolder]"/>
+
+      </MsiPackage>
+
+    </Chain>
+
+  </Bundle>
+
+</Wix>
