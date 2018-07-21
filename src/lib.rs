@@ -48,6 +48,14 @@ fn view_matrix(position: cgmath::Point3<f32>, direction: cgmath::Vector3<f32>, u
 }
 
 
+fn print_matrix(m: [[f32; 4]; 4]) {
+    for i in 0..4 {
+        info!("{:.3}\t{:.3}\t{:.3}\t{:.3}", m[i][0], m[i][1], m[i][2], m[i][3]);
+    }
+    info!("");
+}
+
+
 pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create geometry from STL file
     // =========================
@@ -132,6 +140,11 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     // View matrix (convert to positions relative to camera)
     let view = view_matrix(CAM_POSITION, cgmath::Point3::origin()-CAM_POSITION, cgmath::Vector3::unit_z());
+    info!("View1:");
+    print_matrix(view);
+    let view_matrix = cgmath::Matrix4::look_at(CAM_POSITION, cgmath::Point3::origin(), cgmath::Vector3::unit_z());
+    info!("View2");
+    print_matrix(view_matrix.into());
 
     // Perspective matrix (give illusion of depth)
     // TODO: Figure out how to use cgmath for this
@@ -152,6 +165,16 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
             [             0.0, 0.0, -(2.0*zfar*znear)/(zfar-znear), 0.0],
         ]
     };
+    info!("Perspective1");
+    print_matrix(perspective);
+    let perspective_matrix = cgmath::perspective(
+        cgmath::Deg(CAM_FOV_DEG),
+        config.width as f32 / config.height as f32,
+        0.1,
+        1024.0,
+    );
+    info!("Perspective2:");
+    print_matrix(perspective_matrix.into());
 
     // Direction of light source
     let light_dir = [-1.4, 0.4, -0.7f32];
