@@ -13,7 +13,7 @@ use std::error::Error;
 use std::fs::File;
 use std::{io, thread, time};
 use config::Config;
-use cgmath::{EuclideanSpace, InnerSpace};
+use cgmath::EuclideanSpace;
 use glium::{glutin, Surface};
 use mesh::Mesh;
 
@@ -30,29 +30,11 @@ struct Material {
 }
 
 
-fn view_matrix(position: cgmath::Point3<f32>, direction: cgmath::Vector3<f32>, up: cgmath::Vector3<f32>) -> [[f32; 4]; 4] {
-    let f = direction.normalize();
-    let s_norm = f.cross(-up).normalize();
-    let u = s_norm.cross(-f);
-
-    let p = [-position[0] * s_norm[0] - position[1] * s_norm[1] - position[2] * s_norm[2],
-             -position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
-             -position[0] * f[0] - position[1] * f[1] - position[2] * f[2]];
-
-    [
-        [s_norm[0], u[0], f[0], 0.0],
-        [s_norm[1], u[1], f[1], 0.0],
-        [s_norm[2], u[2], f[2], 0.0],
-        [p[0], p[1], p[2], 1.0],
-    ]
-}
-
-
 fn print_matrix(m: [[f32; 4]; 4]) {
     for i in 0..4 {
-        info!("{:.3}\t{:.3}\t{:.3}\t{:.3}", m[i][0], m[i][1], m[i][2], m[i][3]);
+        debug!("{:.3}\t{:.3}\t{:.3}\t{:.3}", m[i][0], m[i][1], m[i][2], m[i][3]);
     }
-    info!("");
+    debug!("");
 }
 
 
@@ -139,41 +121,20 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let transform_matrix = mesh.scale_and_center();
 
     // View matrix (convert to positions relative to camera)
-    let view = view_matrix(CAM_POSITION, cgmath::Point3::origin()-CAM_POSITION, cgmath::Vector3::unit_z());
-    info!("View1:");
-    print_matrix(view);
+    // TODO: View matrix never changes. We could bake this at compile time and save a
+    // little processing.
     let view_matrix = cgmath::Matrix4::look_at(CAM_POSITION, cgmath::Point3::origin(), cgmath::Vector3::unit_z());
-    info!("View2");
+    debug!("View:");
     print_matrix(view_matrix.into());
 
     // Perspective matrix (give illusion of depth)
-    // TODO: Figure out how to use cgmath for this
-    let perspective = {
-        let (width, height) = (config.width, config.height);
-        let aspect_ratio = height as f32 / width as f32;
-
-        let fov = CAM_FOV_DEG.to_radians();
-        let zfar = 1024.0;
-        let znear = 0.1;
-
-        let f = 1.0 / (fov / 2.0).tan();
-
-        [
-            [f * aspect_ratio, 0.0,                            0.0, 0.0],
-            [             0.0,   f,                            0.0, 0.0],
-            [             0.0, 0.0,      (zfar+znear)/(zfar-znear), 1.0],
-            [             0.0, 0.0, -(2.0*zfar*znear)/(zfar-znear), 0.0],
-        ]
-    };
-    info!("Perspective1");
-    print_matrix(perspective);
     let perspective_matrix = cgmath::perspective(
         cgmath::Deg(CAM_FOV_DEG),
         config.width as f32 / config.height as f32,
         0.1,
         1024.0,
     );
-    info!("Perspective2:");
+    debug!("Perspective:");
     print_matrix(perspective_matrix.into());
 
     // Direction of light source

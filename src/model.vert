@@ -11,6 +11,8 @@ uniform mat4 view;
 uniform mat4 model;
 
 void main() {
+    // TODO: Move this to the CPU side. It only needs to be done once,
+    // not every time the shader is run.
     mat4 modelview = view * model;
 
     gl_Position = perspective * modelview * vec4(position, 1.0);
