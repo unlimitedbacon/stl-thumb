@@ -20,7 +20,7 @@ use mesh::Mesh;
 // TODO: Move this stuff to config module
 const BACKGROUND_COLOR: (f32, f32, f32, f32) = (1.0, 1.0, 1.0, 0.0);
 const CAM_FOV_DEG: f32 = 30.0;
-const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: 4.0, z: 2.0};
+const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
 
 
 struct Material {
@@ -103,7 +103,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
             write: true,
             .. Default::default()
         },
-        backface_culling: glium::draw_parameters::BackfaceCullingMode::CullCounterClockwise,
+        backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
         .. Default::default()
     };
 
@@ -177,7 +177,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     print_matrix(perspective_matrix.into());
 
     // Direction of light source
-    let light_dir = [-1.4, 0.4, -0.7f32];
+    //let light_dir = [-1.4, 0.4, -0.7f32];
+    let light_dir = [-1.4, 0.4, 0.7f32];
 
     // Colors of object
     let colors = Material {
@@ -188,8 +189,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     let uniforms = uniform! {
         model: Into::<[[f32; 4]; 4]>::into(transform_matrix),
-        view: view,
-        perspective: perspective,
+        view: Into::<[[f32; 4]; 4]>::into(view_matrix),
+        perspective: Into::<[[f32; 4]; 4]>::into(perspective_matrix),
         u_light: light_dir,
         ambient_color: colors.ambient,
         diffuse_color: colors.diffuse,
