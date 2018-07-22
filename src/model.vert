@@ -12,8 +12,12 @@ uniform mat4 model;
 
 void main() {
     mat4 modelview = view * model;
-    v_normal = transpose(inverse(mat3(modelview))) * normal;
+
     gl_Position = perspective * modelview * vec4(position, 1.0);
-    v_position = gl_Position.xyz / gl_Position.w;
+    
+    vec4 p = modelview * vec4(position, 1.0);
+    v_position = p.xyz / p.w;
+
+    v_normal = transpose(inverse(mat3(modelview))) * normal;
 }
 

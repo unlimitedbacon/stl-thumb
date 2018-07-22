@@ -178,12 +178,12 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     // Direction of light source
     //let light_dir = [-1.4, 0.4, -0.7f32];
-    let light_dir = [-1.4, 0.4, 0.7f32];
+    let light_dir = [-1.1, 0.4, 1.0f32];
 
     // Colors of object
     let colors = Material {
-        ambient: [0.0, 0.0, 0.6],
-        diffuse: [0.0, 0.6, 1.0],
+        ambient: [0.0, 0.0, 0.4],
+        diffuse: [0.0, 0.5, 1.0],
         specular: [1.0, 1.0, 1.0],
     };
 
