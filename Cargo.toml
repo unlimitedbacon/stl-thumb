@@ -2,6 +2,13 @@
 name = "stl-thumb"
 version = "0.1.0"
 authors = ["Tyler Anderson <unlimitedbacon@gmail.com>"]
+description = "A fast lightweight thumbnail generator for STL files"
+readme = "README.md"
+repository = "https://github.com/unlimitedbacon/stl-thumb"
+license = "MIT"
+
+[badges]
+travis-ci = { repository = "unlimitedbacon/stl-thumb" }
 
 [dependencies]
 cgmath = { version = "0.16.1", features = ["mint"] }
@@ -19,3 +26,18 @@ criterion = "0.2"
 [[bench]]
 name = "cube_benchmark"
 harness = false
+
+[package.metadata.deb]
+license-file = ["LICENSE", "3"]
+depends = "$auto, libgl1"
+extended-description = """\
+Stl-thumb is a fast lightweight thumbnail generator for STL files. \
+It can show previews for STL files in your file manager on Linux and Windows. \
+It is written in Rust and uses OpenGL. """
+section = "graphics"
+priority = "optional"
+assets = [
+    ["target/release/stl-thumb", "usr/bin/", "755"],
+    ["stl-thumb.thumbnailer", "usr/share/thumbnailers/", "644"],
+    ["README.md", "usr/share/doc/stl-thumb/", "644"],
+]
