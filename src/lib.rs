@@ -62,7 +62,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         .with_max_dimensions(config.width, config.height)
         .with_visibility(config.visible);
     let context = glutin::ContextBuilder::new()
-        .with_depth_buffer(24);
+        .with_depth_buffer(24)
+        .with_multisampling(8);
         //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
     let display = glium::Display::new(window, context, &events_loop).unwrap();
     //let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
