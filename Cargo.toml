@@ -39,5 +39,6 @@ priority = "optional"
 assets = [
     ["target/release/stl-thumb", "usr/bin/", "755"],
     ["stl-thumb.thumbnailer", "usr/share/thumbnailers/", "644"],
+    ["stl-thumb-mime.xml", "usr/share/mime/packages/", "644"],
     ["README.md", "usr/share/doc/stl-thumb/", "644"],
 ]

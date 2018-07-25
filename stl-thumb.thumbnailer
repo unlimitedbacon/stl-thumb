@@ -1,4 +1,4 @@
 [Thumbnailer Entry]
 TryExec=stl-thumb
 Exec=stl-thumb -s %s %i %o
-MimeType=model/x.stl-ascii;model/x.stl-binary;
+MimeType=model/stl;model/x.stl-ascii;model/x.stl-binary;

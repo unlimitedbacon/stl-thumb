@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+This is taken from shared-mime-info 1.10
+It is included for older systems which do not have a recent
+shared-mime-info package.
+-->
+
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="model/stl">
+    <_comment>STL 3D model</_comment>
+    <acronym>STL</acronym>
+    <expanded-acronym>StereoLithography</expanded-acronym>
+    <magic priority="50">
+      <match type="string" value="solid" offset="0"/>
+      <match type="string" value="SOLID" offset="0"/>
+    </magic>
+    <glob pattern="*.stl"/>
+    <alias type="model/x.stl-ascii"/>
+    <alias type="model/x.stl-binary"/>
+  </mime-type>
+</mime-info>
