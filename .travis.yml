@@ -6,6 +6,7 @@ script:
     - cargo build --verbose
     # Disable testing for now until headless context is working
     # - cargo test --verbose
+    - cargo build --release
 before_deploy:
     - mkdir target/deploy/
     - cp "./target/release/stl-thumb" "./target/deploy/stl-thumb_${TAG}_${ARCH}"
