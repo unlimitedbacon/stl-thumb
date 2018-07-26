@@ -1,7 +1,7 @@
 language: rust
 cache: cargo
 before_install:
-    - cargo install cargo-deb
+    - cargo install cargo-deb || echo "cargo-deb already installed"
 script:
     - cargo build --verbose
     # Disable testing for now until headless context is working
