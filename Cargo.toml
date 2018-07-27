@@ -29,7 +29,7 @@ harness = false
 
 [package.metadata.deb]
 license-file = ["LICENSE", "3"]
-depends = "$auto, libgl1, libc6, libgcc1"
+depends = "libgl1, libc6, libgcc1"
 extended-description = """\
 Stl-thumb is a fast lightweight thumbnail generator for STL files. \
 It can show previews for STL files in your file manager on Linux and Windows. \
