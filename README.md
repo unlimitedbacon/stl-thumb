@@ -16,6 +16,8 @@ The installer will tell the Windows shell to refresh the thumbnail cache, howeve
 
 ### Linux
 
+Make sure that your file manager is set to generate previews for files larger than 1 MB. Most file managers have this setting under the Preview tab in their Preferences.
+
 Stl-thumb does not currently work with Nautilus (Gnome Files) 3.26. This is the default file manager in Ubuntu 18.04. [Nautilus sandboxes the thumbnailers](https://gitlab.gnome.org/GNOME/gnome-desktop/issues/7), preventing us from using GL. For now you will have to use a different file manager instead.
 
 #### Arch
