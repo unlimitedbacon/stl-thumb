@@ -1,9 +1,7 @@
-#version 140
+#version 120
 
-in vec3 v_normal;
-in vec3 v_position;
-
-out vec4 color;
+varying vec3 v_normal;
+varying vec3 v_position;
 
 uniform vec3 u_light;
 
@@ -23,6 +21,6 @@ void main() {
     // float cosAlpha = clamp( dot(camera_dir,R), 0, 1 );
     // float specular = pow( cosAlpha, 4.0 );
 
-    color = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
+    gl_FragColor = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
 }
 
