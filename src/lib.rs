@@ -55,11 +55,14 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // -----------------
 
     let mut events_loop = glutin::EventsLoop::new();
+    let window_dim = glutin::dpi::LogicalSize::new(
+        config.width.into(),
+        config.height.into());
     let window = glutin::WindowBuilder::new()
         .with_title("stl-thumb")
-        .with_dimensions(config.width, config.height)
-        .with_min_dimensions(config.width, config.height)
-        .with_max_dimensions(config.width, config.height)
+        .with_dimensions(window_dim)
+        .with_min_dimensions(window_dim)
+        .with_max_dimensions(window_dim)
         .with_visibility(config.visible);
     let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
@@ -220,7 +223,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
             events_loop.poll_events(|ev| {
                 match ev {
                     glutin::Event::WindowEvent { event, .. } => match event {
-                        glutin::WindowEvent::Closed => closed = true,
+                        glutin::WindowEvent::CloseRequested => closed = true,
+                        glutin::WindowEvent::Destroyed => closed = true,
                         _ => (),
                     },
                     _ => (),
