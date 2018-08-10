@@ -21,6 +21,7 @@ use mesh::Mesh;
 const BACKGROUND_COLOR: (f32, f32, f32, f32) = (1.0, 1.0, 1.0, 0.0);
 const CAM_FOV_DEG: f32 = 30.0;
 const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
+const MULTISAMPLE_LEVEL: u32 = 4;
 
 
 struct Material {
@@ -66,7 +67,6 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         .with_visibility(config.visible);
     let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
-        //.with_multisampling(8);
         //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
     let display = glium::Display::new(window, context, &events_loop).unwrap();
     //let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
@@ -75,12 +75,13 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     //let display = glium::HeadlessRenderer::new(context).unwrap();
 
     // Print context information
-    info!("GL Version:   {:?}", display.get_opengl_version());
-    info!("GL Version:   {}", display.get_opengl_version_string());
-    info!("GLSL Version: {:?}", display.get_supported_glsl_version());
-    info!("Vendor:       {}", display.get_opengl_vendor_string());
-    info!("Renderer      {}", display.get_opengl_renderer_string());
-    info!("Free GPU Mem: {:?}\n", display.get_free_video_memory());
+    info!("GL Version:    {:?}", display.get_opengl_version());
+    info!("GL Version:    {}", display.get_opengl_version_string());
+    info!("GLSL Version:  {:?}", display.get_supported_glsl_version());
+    info!("Vendor:        {}", display.get_opengl_vendor_string());
+    info!("Renderer       {}", display.get_opengl_renderer_string());
+    info!("Free GPU Mem:  {:?}", display.get_free_video_memory());
+    info!("Multisampling: {}\n", glium::texture::is_texture_2d_multisample_supported(&display));
 
 
     let params = glium::DrawParameters {
@@ -166,8 +167,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // ----
 
     // Create off screen texture to render to
-    let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-    let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+    let texture = glium::texture::Texture2dMultisample::empty(&display, config.width, config.height, MULTISAMPLE_LEVEL).unwrap();
+    let depthtexture = glium::texture::DepthTexture2dMultisample::empty(&display, config.width, config.height, MULTISAMPLE_LEVEL).unwrap();
     let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
 
     // Fills background color and clears depth buffer
@@ -180,18 +181,18 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Save Image
     // ==========
 
-    let pixels: glium::texture::RawImage2d<u8> = texture.read();
-    let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
-    let img = image::DynamicImage::ImageRgba8(img).flipv();
-    // Write to stdout if user did not specify a file
-    let mut output: Box<io::Write> = match config.img_filename {
-        Some(ref x) => {
-            Box::new(std::fs::File::create(&x).unwrap())
-        },
-        None => Box::new(io::stdout()),
-    };
-    img.write_to(&mut output, image::ImageFormat::PNG)
-        .expect("Error saving image");
+    //let pixels: glium::texture::RawImage2d<u8> = texture.read();
+    //let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
+    //let img = image::DynamicImage::ImageRgba8(img).flipv();
+    //// Write to stdout if user did not specify a file
+    //let mut output: Box<io::Write> = match config.img_filename {
+    //    Some(ref x) => {
+    //        Box::new(std::fs::File::create(&x).unwrap())
+    //    },
+    //    None => Box::new(io::stdout()),
+    //};
+    //img.write_to(&mut output, image::ImageFormat::PNG)
+    //    .expect("Error saving image");
 
     // Wait until window is closed
     // ===========================
