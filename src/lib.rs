@@ -163,36 +163,59 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         specular_color: colors.specular,
     };
 
-    // Draw
-    // ----
+    // Render to multisample framebuffer
+    // ---------------------------------
 
     // Create off screen texture to render to
-    let texture = glium::texture::Texture2dMultisample::empty(&display, config.width, config.height, MULTISAMPLE_LEVEL).unwrap();
+    let mstexture = glium::texture::Texture2dMultisample::empty(&display, config.width, config.height, MULTISAMPLE_LEVEL).unwrap();
     let depthtexture = glium::texture::DepthTexture2dMultisample::empty(&display, config.width, config.height, MULTISAMPLE_LEVEL).unwrap();
-    let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+    let mut msframebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &mstexture, &depthtexture).unwrap();
 
     // Fills background color and clears depth buffer
-    framebuffer.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
-    framebuffer.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
+    msframebuffer.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
+    msframebuffer.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
         .unwrap();
-    // TODO: Antialiasing
     // TODO: Shadows
+
+    // Downsample to standard framebuffer
+    // ----------------------------------
+
+    let texture = glium::texture::Texture2d::empty(&display, config.width, config.height).unwrap();
+    let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::new(&display, &texture).unwrap();
+
+    let screen_rect = glium::Rect {
+        left: 0,
+        bottom: 0,
+        width: config.width,
+        height: config.height,
+    };
+    let screen_blit_target = glium::BlitTarget {
+        left: 0,
+        bottom: 0,
+        width: config.width as i32,
+        height: config.height as i32,
+    };
+    framebuffer.blit_from_simple_framebuffer(&msframebuffer,
+                                             &screen_rect,
+                                             &screen_blit_target,
+                                             glium::uniforms::MagnifySamplerFilter::Nearest);
+    
 
     // Save Image
     // ==========
 
-    //let pixels: glium::texture::RawImage2d<u8> = texture.read();
-    //let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
-    //let img = image::DynamicImage::ImageRgba8(img).flipv();
-    //// Write to stdout if user did not specify a file
-    //let mut output: Box<io::Write> = match config.img_filename {
-    //    Some(ref x) => {
-    //        Box::new(std::fs::File::create(&x).unwrap())
-    //    },
-    //    None => Box::new(io::stdout()),
-    //};
-    //img.write_to(&mut output, image::ImageFormat::PNG)
-    //    .expect("Error saving image");
+    let pixels: glium::texture::RawImage2d<u8> = texture.read();
+    let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
+    let img = image::DynamicImage::ImageRgba8(img).flipv();
+    // Write to stdout if user did not specify a file
+    let mut output: Box<io::Write> = match config.img_filename {
+        Some(ref x) => {
+            Box::new(std::fs::File::create(&x).unwrap())
+        },
+        None => Box::new(io::stdout()),
+    };
+    img.write_to(&mut output, image::ImageFormat::PNG)
+        .expect("Error saving image");
 
     // Wait until window is closed
     // ===========================
@@ -206,18 +229,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
             // TODO: I think theres some screwy srgb stuff going on here
             let target = display.draw();
             target.blit_from_simple_framebuffer(&framebuffer,
-                                                &glium::Rect {
-                                                    left: 0,
-                                                    bottom: 0,
-                                                    width: config.width,
-                                                    height: config.height,
-                                                },
-                                                &glium::BlitTarget {
-                                                    left: 0,
-                                                    bottom: 0,
-                                                    width: config.width as i32,
-                                                    height: config.height as i32,
-                                                },
+                                                &screen_rect,
+                                                &screen_blit_target,
                                                 glium::uniforms::MagnifySamplerFilter::Nearest);
             target.finish().unwrap();
             // Listing the events produced by the application and waiting to be received
