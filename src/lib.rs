@@ -14,7 +14,7 @@ use std::fs::File;
 use std::{io, thread, time};
 use config::Config;
 use cgmath::EuclideanSpace;
-use glium::{glutin, Surface};
+use glium::{glutin, Surface, CapabilitiesSource};
 use mesh::Mesh;
 
 // TODO: Move this stuff to config module
@@ -80,7 +80,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     info!("GLSL Version: {:?}", display.get_supported_glsl_version());
     info!("Vendor:       {}", display.get_opengl_vendor_string());
     info!("Renderer      {}", display.get_opengl_renderer_string());
-    info!("Free GPU Mem: {:?}\n", display.get_free_video_memory());
+    info!("Free GPU Mem: {:?}", display.get_free_video_memory());
+    info!("Depth Bits:   {:?}\n", display.get_capabilities().depth_bits);
 
 
     let params = glium::DrawParameters {
