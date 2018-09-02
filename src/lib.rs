@@ -8,6 +8,7 @@ extern crate mint;
 
 pub mod config;
 mod mesh;
+mod fxaa;
 
 use std::error::Error;
 use std::fs::File;
