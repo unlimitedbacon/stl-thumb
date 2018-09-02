@@ -172,12 +172,16 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
     let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
 
-    // Fills background color and clears depth buffer
-    framebuffer.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
-    framebuffer.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
-        .unwrap();
-    // TODO: Antialiasing
-    // TODO: Shadows
+    // Create FXAA system
+    let fxaa = fxaa::FxaaSystem::new(&display);
+
+    fxaa::draw(&fxaa, &mut framebuffer, true, |target| {
+        // Fills background color and clears depth buffer
+        target.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
+        target.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
+            .unwrap();
+        // TODO: Shadows
+    });
 
     // Save Image
     // ==========
