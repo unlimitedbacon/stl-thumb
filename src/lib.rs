@@ -97,8 +97,8 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Load and compile shaders
     // ------------------------
 
-    let vertex_shader_src = include_str!("model.vert");
-    let pixel_shader_src = include_str!("model.frag");
+    let vertex_shader_src = include_str!("shaders/model.vert");
+    let pixel_shader_src = include_str!("shaders/model.frag");
 
     // TODO: Cache program binary
     let program = glium::Program::from_source(&display, &vertex_shader_src, &pixel_shader_src, None);
