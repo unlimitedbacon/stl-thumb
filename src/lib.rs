@@ -30,6 +30,29 @@ struct Material {
 }
 
 
+//struct FrameBufferPack {
+//    texture: glium::Texture2d,
+//    depthtexture: glium::texture::DepthTexture2d,
+//    framebuffer: glium::framebuffer::SimpleFrameBuffer,
+//}
+//
+//impl FrameBufferPack {
+//    fn new<T>(display: &T, config: &Config) -> FrameBufferPack
+//        where &T: glium::backend::Facade
+//    {
+//        // Create off screen texture to render to
+//        let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+//        let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+//        let framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+//        FrameBufferPack {
+//            texture: texture,
+//            depthtexture: depthtexture,
+//            framebuffer: framebuffer,
+//        }
+//    }
+//}
+
+
 fn print_matrix(m: [[f32; 4]; 4]) {
     for i in 0..4 {
         debug!("{:.3}\t{:.3}\t{:.3}\t{:.3}", m[i][0], m[i][1], m[i][2], m[i][3]);
@@ -82,7 +105,11 @@ fn create_headless_display(config: &Config) -> Option<glium::HeadlessRenderer> {
 }
 
 
-fn render_pipeline<T>(display: T, config: &Config, mesh: Mesh)
+fn render_pipeline<T>(display: T,
+                      config: &Config,
+                      mesh: Mesh,
+                      framebuffer: &mut glium::framebuffer::SimpleFrameBuffer,
+                      texture: &glium::Texture2d)
     where T: glium::backend::Facade
 {
     // Graphics Stuff
@@ -170,11 +197,6 @@ fn render_pipeline<T>(display: T, config: &Config, mesh: Mesh)
     // Draw
     // ----
 
-    // Create off screen texture to render to
-    let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-    let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-    let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-
     // Fills background color and clears depth buffer
     framebuffer.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
     framebuffer.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
@@ -200,6 +222,52 @@ fn render_pipeline<T>(display: T, config: &Config, mesh: Mesh)
 }
 
 
+fn show_window(display: glium::Display,
+               mut events_loop: glutin::EventsLoop,
+               framebuffer: glium::framebuffer::SimpleFrameBuffer,
+               config: &Config) {
+    // Wait until window is closed
+    // ===========================
+
+    if config.visible {
+        let mut closed = false;
+        let sleep_time = time::Duration::from_millis(10);
+        while !closed {
+            thread::sleep(sleep_time);
+            // Copy framebuffer to display
+            // TODO: I think theres some screwy srgb stuff going on here
+            let target = display.draw();
+            target.blit_from_simple_framebuffer(&framebuffer,
+                                                &glium::Rect {
+                                                    left: 0,
+                                                    bottom: 0,
+                                                    width: config.width,
+                                                    height: config.height,
+                                                },
+                                                &glium::BlitTarget {
+                                                    left: 0,
+                                                    bottom: 0,
+                                                    width: config.width as i32,
+                                                    height: config.height as i32,
+                                                },
+                                                glium::uniforms::MagnifySamplerFilter::Nearest);
+            target.finish().unwrap();
+            // Listing the events produced by the application and waiting to be received
+            events_loop.poll_events(|ev| {
+                match ev {
+                    glutin::Event::WindowEvent { event, .. } => match event {
+                        glutin::WindowEvent::CloseRequested => closed = true,
+                        glutin::WindowEvent::Destroyed => closed = true,
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            });
+        }
+    }
+}
+
+
 pub fn run(config: &Config) -> Result<(), Box<Error>> {
     // Create geometry from STL file
     // =========================
@@ -219,52 +287,20 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
     if config.visible {
         let (display, events_loop) = create_normal_display(&config).unwrap();
-        render_pipeline(display, &config, mesh);
+        //let mut fbpack = FrameBufferPack::new(&display, &config);
+        let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+        let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+        render_pipeline(display, &config, mesh, &mut framebuffer, &texture);
+        //show_window(display, events_loop, framebuffer, &config);
     } else {
         let display = create_headless_display(&config).unwrap();
-        render_pipeline(display, &config, mesh);
+        //let mut fbpack = FrameBufferPack::new(&display, &config);
+        let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+        let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+        render_pipeline(display, &config, mesh, &mut framebuffer, &texture);
     }
-
-
-    // Wait until window is closed
-    // ===========================
-
-    //if config.visible {
-    //    let mut closed = false;
-    //    let sleep_time = time::Duration::from_millis(10);
-    //    while !closed {
-    //        thread::sleep(sleep_time);
-    //        // Copy framebuffer to display
-    //        // TODO: I think theres some screwy srgb stuff going on here
-    //        let target = display.draw();
-    //        target.blit_from_simple_framebuffer(&framebuffer,
-    //                                            &glium::Rect {
-    //                                                left: 0,
-    //                                                bottom: 0,
-    //                                                width: config.width,
-    //                                                height: config.height,
-    //                                            },
-    //                                            &glium::BlitTarget {
-    //                                                left: 0,
-    //                                                bottom: 0,
-    //                                                width: config.width as i32,
-    //                                                height: config.height as i32,
-    //                                            },
-    //                                            glium::uniforms::MagnifySamplerFilter::Nearest);
-    //        target.finish().unwrap();
-    //        // Listing the events produced by the application and waiting to be received
-    //        events_loop.poll_events(|ev| {
-    //            match ev {
-    //                glutin::Event::WindowEvent { event, .. } => match event {
-    //                    glutin::WindowEvent::CloseRequested => closed = true,
-    //                    glutin::WindowEvent::Destroyed => closed = true,
-    //                    _ => (),
-    //                },
-    //                _ => (),
-    //            }
-    //        });
-    //    }
-    //}
 
     Ok(())
 }
