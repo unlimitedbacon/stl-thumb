@@ -105,12 +105,12 @@ fn create_headless_display(config: &Config) -> Option<glium::HeadlessRenderer> {
 }
 
 
-fn render_pipeline<T>(display: T,
+fn render_pipeline<F>(display: &F,
                       config: &Config,
                       mesh: Mesh,
                       framebuffer: &mut glium::framebuffer::SimpleFrameBuffer,
                       texture: &glium::Texture2d)
-    where T: glium::backend::Facade
+    where F: glium::backend::Facade,
 {
     // Graphics Stuff
     // ==============
@@ -132,7 +132,7 @@ fn render_pipeline<T>(display: T,
     let pixel_shader_src = include_str!("model.frag");
 
     // TODO: Cache program binary
-    let program = glium::Program::from_source(&display, &vertex_shader_src, &pixel_shader_src, None);
+    let program = glium::Program::from_source(display, &vertex_shader_src, &pixel_shader_src, None);
     let program = match program {
         Ok(p) => p,
         Err(glium::CompilationError(err)) => {
@@ -145,8 +145,8 @@ fn render_pipeline<T>(display: T,
     // Send mesh data to GPU
     // ---------------------
 
-    let vertex_buf = glium::VertexBuffer::new(&display, &mesh.vertices).unwrap();
-    let normal_buf = glium::VertexBuffer::new(&display, &mesh.normals).unwrap();
+    let vertex_buf = glium::VertexBuffer::new(display, &mesh.vertices).unwrap();
+    let normal_buf = glium::VertexBuffer::new(display, &mesh.normals).unwrap();
     // Can use NoIndices here because STLs are dumb
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
@@ -291,15 +291,15 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
         let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
         let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-        render_pipeline(display, &config, mesh, &mut framebuffer, &texture);
-        //show_window(display, events_loop, framebuffer, &config);
+        render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+        show_window(display, events_loop, framebuffer, &config);
     } else {
         let display = create_headless_display(&config).unwrap();
         //let mut fbpack = FrameBufferPack::new(&display, &config);
         let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
         let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
         let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-        render_pipeline(display, &config, mesh, &mut framebuffer, &texture);
+        render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
     }
 
     Ok(())
