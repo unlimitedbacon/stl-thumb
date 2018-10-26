@@ -38,22 +38,20 @@ fn print_matrix(m: [[f32; 4]; 4]) {
 }
 
 
-pub fn run(config: &Config) -> Result<(), Box<Error>> {
-    // Create geometry from STL file
-    // =========================
+fn print_context_info(display: &glium::backend::Context) 
+{
+    // Print context information
+    info!("GL Version:   {:?}", display.get_opengl_version());
+    info!("GL Version:   {}", display.get_opengl_version_string());
+    info!("GLSL Version: {:?}", display.get_supported_glsl_version());
+    info!("Vendor:       {}", display.get_opengl_vendor_string());
+    info!("Renderer      {}", display.get_opengl_renderer_string());
+    info!("Free GPU Mem: {:?}", display.get_free_video_memory());
+    info!("Depth Bits:   {:?}\n", display.get_capabilities().depth_bits);
+}
 
-    // TODO: Add support for URIs instead of plain file names
-    // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
-    let stl_file = File::open(&config.stl_filename)?;
-    let mesh = Mesh::from_stl(stl_file)?;
 
-
-    // Graphics Stuff
-    // ==============
-
-    // Create GL context
-    // -----------------
-
+fn create_normal_display(config: &Config) -> Option<(glium::Display, glutin::EventsLoop)> {
     let mut events_loop = glutin::EventsLoop::new();
     let window_dim = glutin::dpi::LogicalSize::new(
         config.width.into(),
@@ -69,20 +67,26 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         //.with_multisampling(8);
         //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
     let display = glium::Display::new(window, context, &events_loop).unwrap();
-    //let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
-    //    //.with_depth_buffer(24)
-    //    .build().unwrap();
-    //let display = glium::HeadlessRenderer::new(context).unwrap();
+    print_context_info(&display);
+    Some((display,events_loop))
+}
 
-    // Print context information
-    info!("GL Version:   {:?}", display.get_opengl_version());
-    info!("GL Version:   {}", display.get_opengl_version_string());
-    info!("GLSL Version: {:?}", display.get_supported_glsl_version());
-    info!("Vendor:       {}", display.get_opengl_vendor_string());
-    info!("Renderer      {}", display.get_opengl_renderer_string());
-    info!("Free GPU Mem: {:?}", display.get_free_video_memory());
-    info!("Depth Bits:   {:?}\n", display.get_capabilities().depth_bits);
 
+fn create_headless_display(config: &Config) -> Option<glium::HeadlessRenderer> {
+    let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
+        //.with_depth_buffer(24)
+        .build().unwrap();
+    let display = glium::HeadlessRenderer::new(context).unwrap();
+    print_context_info(&display);
+    Some(display)
+}
+
+
+fn render_pipeline<T>(display: T, config: &Config, mesh: Mesh)
+    where T: glium::backend::Facade
+{
+    // Graphics Stuff
+    // ==============
 
     let params = glium::DrawParameters {
         depth: glium::Depth {
@@ -193,46 +197,74 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     };
     img.write_to(&mut output, image::ImageFormat::PNG)
         .expect("Error saving image");
+}
+
+
+pub fn run(config: &Config) -> Result<(), Box<Error>> {
+    // Create geometry from STL file
+    // =========================
+
+    // TODO: Add support for URIs instead of plain file names
+    // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
+    let stl_file = File::open(&config.stl_filename)?;
+    let mesh = Mesh::from_stl(stl_file)?;
+
+
+    // Create GL context
+    // -----------------
+
+    // 1. If visible create a normal context.
+    // 2. If not visible create a headless context.
+    // 3. If headless context creation fails, create a normal context with a hidden window.
+
+    if config.visible {
+        let (display, events_loop) = create_normal_display(&config).unwrap();
+        render_pipeline(display, &config, mesh);
+    } else {
+        let display = create_headless_display(&config).unwrap();
+        render_pipeline(display, &config, mesh);
+    }
+
 
     // Wait until window is closed
     // ===========================
 
-    if config.visible {
-        let mut closed = false;
-        let sleep_time = time::Duration::from_millis(10);
-        while !closed {
-            thread::sleep(sleep_time);
-            // Copy framebuffer to display
-            // TODO: I think theres some screwy srgb stuff going on here
-            let target = display.draw();
-            target.blit_from_simple_framebuffer(&framebuffer,
-                                                &glium::Rect {
-                                                    left: 0,
-                                                    bottom: 0,
-                                                    width: config.width,
-                                                    height: config.height,
-                                                },
-                                                &glium::BlitTarget {
-                                                    left: 0,
-                                                    bottom: 0,
-                                                    width: config.width as i32,
-                                                    height: config.height as i32,
-                                                },
-                                                glium::uniforms::MagnifySamplerFilter::Nearest);
-            target.finish().unwrap();
-            // Listing the events produced by the application and waiting to be received
-            events_loop.poll_events(|ev| {
-                match ev {
-                    glutin::Event::WindowEvent { event, .. } => match event {
-                        glutin::WindowEvent::CloseRequested => closed = true,
-                        glutin::WindowEvent::Destroyed => closed = true,
-                        _ => (),
-                    },
-                    _ => (),
-                }
-            });
-        }
-    }
+    //if config.visible {
+    //    let mut closed = false;
+    //    let sleep_time = time::Duration::from_millis(10);
+    //    while !closed {
+    //        thread::sleep(sleep_time);
+    //        // Copy framebuffer to display
+    //        // TODO: I think theres some screwy srgb stuff going on here
+    //        let target = display.draw();
+    //        target.blit_from_simple_framebuffer(&framebuffer,
+    //                                            &glium::Rect {
+    //                                                left: 0,
+    //                                                bottom: 0,
+    //                                                width: config.width,
+    //                                                height: config.height,
+    //                                            },
+    //                                            &glium::BlitTarget {
+    //                                                left: 0,
+    //                                                bottom: 0,
+    //                                                width: config.width as i32,
+    //                                                height: config.height as i32,
+    //                                            },
+    //                                            glium::uniforms::MagnifySamplerFilter::Nearest);
+    //        target.finish().unwrap();
+    //        // Listing the events produced by the application and waiting to be received
+    //        events_loop.poll_events(|ev| {
+    //            match ev {
+    //                glutin::Event::WindowEvent { event, .. } => match event {
+    //                    glutin::WindowEvent::CloseRequested => closed = true,
+    //                    glutin::WindowEvent::Destroyed => closed = true,
+    //                    _ => (),
+    //                },
+    //                _ => (),
+    //            }
+    //        });
+    //    }
+    //}
 
     Ok(())
 }
