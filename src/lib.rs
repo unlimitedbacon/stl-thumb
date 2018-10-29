@@ -30,29 +30,6 @@ struct Material {
 }
 
 
-//struct FrameBufferPack {
-//    texture: glium::Texture2d,
-//    depthtexture: glium::texture::DepthTexture2d,
-//    framebuffer: glium::framebuffer::SimpleFrameBuffer,
-//}
-//
-//impl FrameBufferPack {
-//    fn new<T>(display: &T, config: &Config) -> FrameBufferPack
-//        where &T: glium::backend::Facade
-//    {
-//        // Create off screen texture to render to
-//        let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-//        let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-//        let framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-//        FrameBufferPack {
-//            texture: texture,
-//            depthtexture: depthtexture,
-//            framebuffer: framebuffer,
-//        }
-//    }
-//}
-
-
 fn print_matrix(m: [[f32; 4]; 4]) {
     for i in 0..4 {
         debug!("{:.3}\t{:.3}\t{:.3}\t{:.3}", m[i][0], m[i][1], m[i][2], m[i][3]);
@@ -74,8 +51,8 @@ fn print_context_info(display: &glium::backend::Context)
 }
 
 
-fn create_normal_display(config: &Config) -> Option<(glium::Display, glutin::EventsLoop)> {
-    let mut events_loop = glutin::EventsLoop::new();
+fn create_normal_display(config: &Config) -> Result<(glium::Display, glutin::EventsLoop), Box<Error>> {
+    let events_loop = glutin::EventsLoop::new();
     let window_dim = glutin::dpi::LogicalSize::new(
         config.width.into(),
         config.height.into());
@@ -89,19 +66,20 @@ fn create_normal_display(config: &Config) -> Option<(glium::Display, glutin::Eve
         .with_depth_buffer(24);
         //.with_multisampling(8);
         //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
-    let display = glium::Display::new(window, context, &events_loop).unwrap();
+    let display = glium::Display::new(window, context, &events_loop)?;
     print_context_info(&display);
-    Some((display,events_loop))
+    Ok((display,events_loop))
 }
 
 
-fn create_headless_display(config: &Config) -> Option<glium::HeadlessRenderer> {
+fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<Error>> {
     let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
+        .with_gl(glutin::GlRequest::Latest)
         //.with_depth_buffer(24)
-        .build().unwrap();
-    let display = glium::HeadlessRenderer::new(context).unwrap();
+        .build()?;
+    let display = glium::HeadlessRenderer::new(context)?;
     print_context_info(&display);
-    Some(display)
+    Ok(display)
 }
 
 
@@ -269,7 +247,7 @@ fn show_window(display: glium::Display,
 
 
 pub fn run(config: &Config) -> Result<(), Box<Error>> {
-    // Create geometry from STL file
+    // Get geometry from STL file
     // =========================
 
     // TODO: Add support for URIs instead of plain file names
@@ -279,27 +257,42 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
 
 
     // Create GL context
-    // -----------------
+    // =================
 
     // 1. If visible create a normal context.
     // 2. If not visible create a headless context.
     // 3. If headless context creation fails, create a normal context with a hidden window.
 
     if config.visible {
-        let (display, events_loop) = create_normal_display(&config).unwrap();
-        //let mut fbpack = FrameBufferPack::new(&display, &config);
+        let (display, events_loop) = create_normal_display(&config)?;
+        // TODO: Find a way to not repeat these lines for creating the framebuffer
         let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
         let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
         let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
         render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
         show_window(display, events_loop, framebuffer, &config);
     } else {
-        let display = create_headless_display(&config).unwrap();
-        //let mut fbpack = FrameBufferPack::new(&display, &config);
-        let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-        let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-        render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+        match create_headless_display(&config) {
+            Ok(display) => {
+                // Note: Headless context on Linux always seems to end up with a software
+                // renderer. I would prefer to try the normal context first (w/ hidden window)
+                // but it panics if creating the event loop fails, which is unrecoverable.
+                // Glutin is in the process of unifying the two types of contexts. Maybe then
+                // headless will use hardware acceleration.
+                let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+                let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+                let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+                render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+            },
+            Err(e) => {
+                warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
+                let (display, _) = create_normal_display(&config)?;
+                let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+                let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+                let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+                render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+            },
+        };
     }
 
     Ok(())
