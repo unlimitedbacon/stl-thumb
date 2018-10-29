@@ -18,8 +18,6 @@ The installer will tell the Windows shell to refresh the thumbnail cache, howeve
 
 Make sure that your file manager is set to generate previews for files larger than 1 MB. Most file managers have this setting under the Preview tab in their Preferences.
 
-Stl-thumb does not currently work with Nautilus (Gnome Files) 3.26. This is the default file manager in Ubuntu 18.04. [Nautilus sandboxes the thumbnailers](https://gitlab.gnome.org/GNOME/gnome-desktop/issues/7), preventing us from using GL. For now you will have to use a different file manager instead.
-
 #### Arch
 
 A package is available [in the AUR](https://aur.archlinux.org/packages/stl-thumb/). Install it manually or using your favorite AUR helper.
@@ -30,7 +28,7 @@ $ yay -S stl-thumb
 
 #### Debian / Ubuntu
 
-[Download the .deb package](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for your platform (usually amd64) and install it. Packages are also available for armhf (Raspberry Pi) and arm64.
+[Download the .deb package](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for your platform (usually amd64) and install it. Packages are also available for armhf (Raspberry Pi) and arm64 (Pinebook and other SBCs).
 
 ```
 $ sudo dpkg -i stl-thumb_0.1.0_amd64.deb
@@ -52,4 +50,4 @@ $ stl-thumb <STL_FILE> [IMG_FILE]
 | -x            | Display the image in a window.                          |
 | -h, --help    | Prints help information.                                |
 | -V, --version | Prints version information.                             |
-| -v[v][v]      | Increase message verbosity.                             |
+| -v[v][v]      | Increase message verbosity. Levels: Errors, Warnings, Info, Debugging |
