@@ -286,6 +286,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
             },
             Err(e) => {
                 warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
+                println!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
                 let (display, _) = create_normal_display(&config)?;
                 let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
                 let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
@@ -308,15 +309,17 @@ mod tests {
 
     #[test]
     fn cube() {
+        let img_filename = "cube.png".to_string();
         let config = Config {
             stl_filename: "test_data/cube.stl".to_string(),
-            img_filename: "cube.png".to_string(),
+            img_filename: Some(img_filename.clone()),
             width: 1024,
             height: 768,
             visible: false,
+            verbosity: 2,
         };
 
-        match fs::remove_file(&config.img_filename) {
+        match fs::remove_file(&img_filename) {
             Ok(_) => (),
             Err(ref error) if error.kind() == ErrorKind::NotFound => (),
             Err(_) => {
@@ -326,7 +329,7 @@ mod tests {
 
         run(&config).expect("Error in run function");
 
-        let size = fs::metadata(config.img_filename)
+        let size = fs::metadata(img_filename)
             .expect("No file created")
             .len();
 
