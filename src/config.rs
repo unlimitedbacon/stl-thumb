@@ -1,8 +1,12 @@
 extern crate clap;
 
+use image::ImageOutputFormat;
+use std::path::Path;
+
 pub struct Config {
     pub stl_filename: String,
     pub img_filename: Option<String>,
+    pub format: ImageOutputFormat,
     pub width: u32,
     pub height: u32,
     pub visible: bool,
@@ -25,6 +29,13 @@ impl Config {
                 clap::Arg::with_name("IMG_FILE")
                     .help("Thumbnail image file. If this is omitted, the image data will be dumped to stdout.")
                     .index(2),
+            )
+            .arg(
+                clap::Arg::with_name("format")
+                    .help("The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP")
+                    .short("f")
+                    .long("format")
+                    .takes_value(true)
             )
             .arg(
                 clap::Arg::with_name("size")
@@ -53,6 +64,20 @@ impl Config {
             Some(x) => Some(x.to_string()),
             None => None,
         };
+        let format = match matches.value_of("format") {
+            Some(x) => match_format(x),
+            None => {
+                match &img_filename {
+                    Some(x) => {
+                        match Path::new(x).extension() {
+                            Some(ext) => match_format(ext.to_str().unwrap()),
+                            None => ImageOutputFormat::PNG,
+                        }
+                    },
+                    None => ImageOutputFormat::PNG,
+                }
+            },
+        };
         let width = matches.value_of("size").unwrap_or("1024");
         let height = matches.value_of("size").unwrap_or("768");
         let width = width.parse::<u32>()
@@ -65,12 +90,25 @@ impl Config {
         Config {
             stl_filename,
             img_filename,
+            format,
             width,
             height,
             visible,
             verbosity,
         }
     }
+
 }
 
 
+fn match_format(ext: &str) -> ImageOutputFormat {
+    match ext.to_lowercase().as_ref() {
+        "png" => ImageOutputFormat::PNG,
+        "jpeg" => ImageOutputFormat::JPEG(95),
+        "jpg" => ImageOutputFormat::JPEG(95),
+        "gif" => ImageOutputFormat::GIF,
+        "ico" => ImageOutputFormat::ICO,
+        "bmp" => ImageOutputFormat::BMP,
+        _ => panic!("Unsupported image format"),
+    }
+}

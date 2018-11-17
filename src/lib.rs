@@ -195,7 +195,7 @@ fn render_pipeline<F>(display: &F,
         },
         None => Box::new(io::stdout()),
     };
-    img.write_to(&mut output, image::ImageFormat::PNG)
+    img.write_to(&mut output, config.format.to_owned())
         .expect("Error saving image");
 }
 
@@ -313,6 +313,7 @@ mod tests {
         let config = Config {
             stl_filename: "test_data/cube.stl".to_string(),
             img_filename: Some(img_filename.clone()),
+            format: image::ImageOutputFormat::PNG,
             width: 1024,
             height: 768,
             visible: false,
