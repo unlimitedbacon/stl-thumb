@@ -31,7 +31,7 @@ $ yay -S stl-thumb
 [Download the .deb package](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for your platform (usually amd64) and install it. Packages are also available for armhf (Raspberry Pi) and arm64 (Pinebook and other SBCs).
 
 ```
-$ sudo dpkg -i stl-thumb_0.1.0_amd64.deb
+$ sudo dpkg -i stl-thumb_0.3.0_amd64.deb
 ```
 
 ## Command Line Usage
@@ -45,8 +45,9 @@ $ stl-thumb <STL_FILE> [IMG_FILE]
 | Option        | Description                                             |
 | ------------- | ------------------------------------------------------- |
 | <STL_FILE>    | The STL file you want a picture of.                     |
-| [IMG_FILE]    | The thumbnail image file that will be created. Always PNG format. If this is omitted, the image data will be dumped to stdout. |
+| [IMG_FILE]    | The thumbnail image file that will be created. If this is omitted, the image data will be dumped to stdout. |
 | -s \<size\>   | Specify width of the image. It will always be a square. |
+| -f, --format  | The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP |
 | -x            | Display the image in a window.                          |
 | -h, --help    | Prints help information.                                |
 | -V, --version | Prints version information.                             |
