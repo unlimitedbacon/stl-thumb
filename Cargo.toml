@@ -1,6 +1,6 @@
 [package]
 name = "stl-thumb"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Tyler Anderson <unlimitedbacon@gmail.com>"]
 description = "A fast lightweight thumbnail generator for STL files"
 readme = "README.md"
