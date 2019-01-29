@@ -109,6 +109,9 @@ fn match_format(ext: &str) -> ImageOutputFormat {
         "gif" => ImageOutputFormat::GIF,
         "ico" => ImageOutputFormat::ICO,
         "bmp" => ImageOutputFormat::BMP,
-        _ => panic!("Unsupported image format"),
+        _ => {
+            warn!("Unsupported image format. Using PNG instead.");
+            ImageOutputFormat::PNG
+        },
     }
 }

@@ -1026,7 +1026,7 @@ dependencies = [
 
 [[package]]
 name = "stl-thumb"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cgmath 0.16.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
