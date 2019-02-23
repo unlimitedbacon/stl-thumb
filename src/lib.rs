@@ -62,22 +62,21 @@ fn create_normal_display(config: &Config) -> Result<(glium::Display, glutin::Eve
         .with_min_dimensions(window_dim)
         .with_max_dimensions(window_dim)
         .with_visibility(config.visible);
-    let context_builder = glutin::ContextBuilder::new()
+    let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
         //.with_multisampling(8);
         //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
-    let display = glium::Display::new(window, context_builder, &events_loop)?;
+    let display = glium::Display::new(window, context, &events_loop)?;
     print_context_info(&display);
     Ok((display,events_loop))
 }
 
 
-fn create_headless_display() -> Result<glium::HeadlessRenderer, Box<Error>> {
-    let events_loop = glutin::EventsLoop::new();
-    let context_builder = glutin::ContextBuilder::new()
-        .with_gl(glutin::GlRequest::Latest);
+fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<Error>> {
+    let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
+        .with_gl(glutin::GlRequest::Latest)
         //.with_depth_buffer(24)
-    let context = glutin::Context::new(&events_loop, context_builder, true)?;
+        .build()?;
     let display = glium::HeadlessRenderer::new(context)?;
     print_context_info(&display);
     Ok(display)
@@ -273,7 +272,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
         render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
         show_window(display, events_loop, framebuffer, &config);
     } else {
-        match create_headless_display() {
+        match create_headless_display(&config) {
             Ok(display) => {
                 // Note: Headless context on Linux always seems to end up with a software
                 // renderer. I would prefer to try the normal context first (w/ hidden window)
@@ -287,6 +286,7 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
             },
             Err(e) => {
                 warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
+                println!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
                 let (display, _) = create_normal_display(&config)?;
                 let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
                 let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();

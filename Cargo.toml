@@ -13,7 +13,10 @@ travis-ci = { repository = "unlimitedbacon/stl-thumb" }
 [dependencies]
 cgmath = { version = "0.16.1", features = ["mint"] }
 clap = "2.31.2"
-glium = "0.23.0"
+# There is a bug in winit 0.16.0 that prevents hidden windows from working on Windows.
+# Temporarily using this fork of glium because it pulls glutin 0.18.0, and thus winit 0.17.0.
+# This should be changed back once the fork is merged and glium 0.23.0 is released.
+glium = { git = "https://github.com/expenses/glium.git", rev = "49c12e75e1f321958ed4b7f90b04faf9bf9cd299" }
 image = "0.19.0"
 log = "0.4.1"
 mint = "0.5.0"
