@@ -286,7 +286,6 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
             },
             Err(e) => {
                 warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
-                println!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
                 let (display, _) = create_normal_display(&config)?;
                 let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
                 let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
