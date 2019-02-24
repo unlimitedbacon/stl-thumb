@@ -16,11 +16,13 @@ matrix:
             apt:
                 packages:
                     - gcc-arm-linux-gnueabihf
+                    - libc-dev-armhf-cross
         - env: TARGET=aarch64-unknown-linux-gnu
           addons:
             apt:
                 packages:
                     - gcc-aarch64-linux-gnu
+                    - libc-dev-arm64-cross
 
 before_install:
     - cargo install cargo-deb || echo "cargo-deb already installed"
