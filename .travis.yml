@@ -14,7 +14,9 @@ script:
 before_deploy:
     - mkdir target/deploy/
     - cargo build --release
+    - cargo deb
     - cp "./target/release/stl-thumb" "./target/deploy/stl-thumb_${TAG}_${ARCH}"
+    - cp "./target/debian/*.deb" "./target/deploy/"
 deploy:
     provider: releases
     api_key:
@@ -24,3 +26,4 @@ deploy:
     on:
         repo: unlimitedbacon/stl-thumb
         tags: true
+    skip_cleanup: true
