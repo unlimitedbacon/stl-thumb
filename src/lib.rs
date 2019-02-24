@@ -23,13 +23,6 @@ const CAM_FOV_DEG: f32 = 30.0;
 const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
 
 
-struct Material {
-    ambient: [f32; 3],
-    diffuse: [f32; 3],
-    specular: [f32; 3],
-}
-
-
 fn print_matrix(m: [[f32; 4]; 4]) {
     for i in 0..4 {
         debug!("{:.3}\t{:.3}\t{:.3}\t{:.3}", m[i][0], m[i][1], m[i][2], m[i][3]);
@@ -155,21 +148,14 @@ fn render_pipeline<F>(display: &F,
     //let light_dir = [-1.4, 0.4, -0.7f32];
     let light_dir = [-1.1, 0.4, 1.0f32];
 
-    // Colors of object
-    let colors = Material {
-        ambient: [0.0, 0.0, 0.4],
-        diffuse: [0.0, 0.5, 1.0],
-        specular: [1.0, 1.0, 1.0],
-    };
-
     let uniforms = uniform! {
         model: Into::<[[f32; 4]; 4]>::into(transform_matrix),
         view: Into::<[[f32; 4]; 4]>::into(view_matrix),
         perspective: Into::<[[f32; 4]; 4]>::into(perspective_matrix),
         u_light: light_dir,
-        ambient_color: colors.ambient,
-        diffuse_color: colors.diffuse,
-        specular_color: colors.specular,
+        ambient_color: config.material.ambient,
+        diffuse_color: config.material.diffuse,
+        specular_color: config.material.specular,
     };
 
     // Draw
@@ -317,6 +303,11 @@ mod tests {
             height: 768,
             visible: false,
             verbosity: 2,
+            material: config::Material {
+                ambient: [0.0, 0.0, 0.4],
+                diffuse: [0.0, 0.5, 1.0],
+                specular: [1.0, 1.0, 1.0],
+            },
         };
 
         match fs::remove_file(&img_filename) {

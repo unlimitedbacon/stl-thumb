@@ -46,8 +46,9 @@ $ stl-thumb <STL_FILE> [IMG_FILE]
 | ------------- | ------------------------------------------------------- |
 | <STL_FILE>    | The STL file you want a picture of.                     |
 | [IMG_FILE]    | The thumbnail image file that will be created. If this is omitted, the image data will be dumped to stdout. |
-| -s \<size\>   | Specify width of the image. It will always be a square. |
-| -f, --format  | The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP |
+| -s, --size \<size\>   | Specify width of the image. It will always be a square. |
+| -f, --format \<format\> | The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP |
+| -m, --material \<ambient\> \<diffuse\> \<specular\> | Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue. |
 | -x            | Display the image in a window.                          |
 | -h, --help    | Prints help information.                                |
 | -V, --version | Prints version information.                             |

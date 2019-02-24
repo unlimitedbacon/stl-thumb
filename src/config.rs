@@ -2,6 +2,13 @@ extern crate clap;
 
 use image::ImageOutputFormat;
 use std::path::Path;
+use std::f32;
+
+pub struct Material {
+    pub ambient: [f32; 3],
+    pub diffuse: [f32; 3],
+    pub specular: [f32; 3],
+}
 
 pub struct Config {
     pub stl_filename: String,
@@ -11,6 +18,7 @@ pub struct Config {
     pub height: u32,
     pub visible: bool,
     pub verbosity: usize,
+    pub material: Material,
 }
 
 impl Config {
@@ -57,6 +65,13 @@ impl Config {
                     .multiple(true)
                     .help("Increase message verbosity")
             )
+            .arg(
+                clap::Arg::with_name("material")
+                    .help("Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue.")
+                    .short("m")
+                    .long("material")
+                    .value_names(&["ambient","diffuse","specular"])
+            )
             .get_matches();
 
         let stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
@@ -86,6 +101,18 @@ impl Config {
             .expect("Invalid size");
         let visible = matches.is_present("visible");
         let verbosity = matches.occurrences_of("verbosity") as usize;
+        let material = match matches.values_of("material") {
+            Some(mut x) => Material {
+                ambient: html_to_rgb(x.next().unwrap()),
+                diffuse: html_to_rgb(x.next().unwrap()),
+                specular: html_to_rgb(x.next().unwrap()),
+            },
+            None => Material {
+                ambient: [0.0, 0.0, 0.4],
+                diffuse: [0.0, 0.5, 1.0],
+                specular: [1.0, 1.0, 1.0],
+            },
+        };
 
         Config {
             stl_filename,
@@ -95,6 +122,7 @@ impl Config {
             height,
             visible,
             verbosity,
+            material,
         }
     }
 
@@ -114,4 +142,11 @@ fn match_format(ext: &str) -> ImageOutputFormat {
             ImageOutputFormat::PNG
         },
     }
+}
+
+fn html_to_rgb(color: &str) -> [f32; 3] {
+    let r: f32 = u8::from_str_radix(&color[0..2], 16).expect("Invalid color") as f32 / 255.0;
+    let g: f32 = u8::from_str_radix(&color[2..4], 16).expect("Invalid color") as f32 / 255.0;
+    let b: f32 = u8::from_str_radix(&color[4..6], 16).expect("Invalid color") as f32 / 255.0;
+    [r, g, b]
 }
