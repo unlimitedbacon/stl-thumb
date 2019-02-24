@@ -1,3 +1,4 @@
+dist: xenial
 language: rust
 addons:
     apt:
@@ -9,9 +10,7 @@ before_install:
     - cargo install cargo-deb || echo "cargo-deb already installed"
 script:
     - cargo build
-    # Ubuntu 14.04 is too old to support headless mode.
-    # Have to wait until Travis upgrades to 16.04.
-    #- RUST_BACKTRACE=1 xvfb-run cargo test
+    - RUST_BACKTRACE=1 xvfb-run cargo test
 before_deploy:
     - mkdir target/deploy/
     - cargo build --release
