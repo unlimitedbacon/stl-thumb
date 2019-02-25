@@ -11,13 +11,13 @@ addons:
 matrix:
     include:
         - env: TARGET=x86_64-unknown-linux-gnu
-        - env: TARGET=armv7-unknown-linux-gnueabihf
+        - env: TARGET=armv7-unknown-linux-gnueabihf DISABLE_TESTS=1
           addons:
             apt:
                 packages:
                     - gcc-arm-linux-gnueabihf
                     - libc-dev-armhf-cross
-        - env: TARGET=aarch64-unknown-linux-gnu
+        - env: TARGET=aarch64-unknown-linux-gnu DISABLE_TESTS=1
           addons:
             apt:
                 packages:
@@ -33,7 +33,7 @@ install:
 
 script:
     - cargo build --release --target $TARGET
-    - RUST_BACKTRACE=1 xvfb-run cargo test --target $TARGET
+    - if [ ! $DISABLE_TESTS ]; then RUST_BACKTRACE=1 xvfb-run cargo test --target $TARGET; fi
 
 before_deploy:
     - mkdir target/deploy/
