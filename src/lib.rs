@@ -18,7 +18,6 @@ use glium::{glutin, Surface, CapabilitiesSource};
 use mesh::Mesh;
 
 // TODO: Move this stuff to config module
-const BACKGROUND_COLOR: (f32, f32, f32, f32) = (1.0, 1.0, 1.0, 0.0);
 const CAM_FOV_DEG: f32 = 30.0;
 const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
 
@@ -162,7 +161,7 @@ fn render_pipeline<F>(display: &F,
     // ----
 
     // Fills background color and clears depth buffer
-    framebuffer.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
+    framebuffer.clear_color_and_depth(config.background, 1.0);
     framebuffer.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
         .unwrap();
     // TODO: Antialiasing
@@ -308,6 +307,7 @@ mod tests {
                 diffuse: [0.0, 0.5, 1.0],
                 specular: [1.0, 1.0, 1.0],
             },
+            background: (1.0, 1.0, 1.0, 0.0),
         };
 
         match fs::remove_file(&img_filename) {

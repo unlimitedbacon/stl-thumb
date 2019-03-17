@@ -19,6 +19,7 @@ pub struct Config {
     pub visible: bool,
     pub verbosity: usize,
     pub material: Material,
+    pub background: (f32, f32, f32, f32),
 }
 
 impl Config {
@@ -72,6 +73,14 @@ impl Config {
                     .long("material")
                     .value_names(&["ambient","diffuse","specular"])
             )
+            .arg(
+                clap::Arg::with_name("background")
+                    .help("The background color with transparency (rgba). Default is ffffff00.")
+                    .short("b")
+                    .long("background")
+                    .takes_value(true)
+                    .required(false)
+            )
             .get_matches();
 
         let stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
@@ -113,6 +122,10 @@ impl Config {
                 specular: [1.0, 1.0, 1.0],
             },
         };
+        let background = match matches.value_of("background") {
+            Some(x) => html_to_rgba(x),
+            None => (1.0, 1.0, 1.0, 0.0),
+        };
 
         Config {
             stl_filename,
@@ -123,6 +136,7 @@ impl Config {
             visible,
             verbosity,
             material,
+            background,
         }
     }
 
@@ -149,4 +163,12 @@ fn html_to_rgb(color: &str) -> [f32; 3] {
     let g: f32 = u8::from_str_radix(&color[2..4], 16).expect("Invalid color") as f32 / 255.0;
     let b: f32 = u8::from_str_radix(&color[4..6], 16).expect("Invalid color") as f32 / 255.0;
     [r, g, b]
+}
+
+fn html_to_rgba(color: &str) -> (f32, f32, f32, f32) {
+    let r: f32 = u8::from_str_radix(&color[0..2], 16).expect("Invalid color") as f32 / 255.0;
+    let g: f32 = u8::from_str_radix(&color[2..4], 16).expect("Invalid color") as f32 / 255.0;
+    let b: f32 = u8::from_str_radix(&color[4..6], 16).expect("Invalid color") as f32 / 255.0;
+    let a: f32 = u8::from_str_radix(&color[6..8], 16).expect("Invalid color") as f32 / 255.0;
+    (r, g, b, a)
 }

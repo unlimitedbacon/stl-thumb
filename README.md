@@ -50,6 +50,7 @@ $ stl-thumb <STL_FILE> [IMG_FILE]
 | -s, --size \<size\>   | Specify width of the image. It will always be a square. |
 | -f, --format \<format\> | The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP |
 | -m, --material \<ambient\> \<diffuse\> \<specular\> | Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue. |
+| -b, --backround \<color> | The background color with transparency (rgba). Default is ffffff00. |
 | -x            | Display the image in a window.                          |
 | -h, --help    | Prints help information.                                |
 | -V, --version | Prints version information.                             |
