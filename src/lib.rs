@@ -13,13 +13,13 @@ use std::error::Error;
 use std::fs::File;
 use std::{io, thread, time};
 use config::Config;
-use cgmath::EuclideanSpace;
+//use cgmath::EuclideanSpace;
 use glium::{glutin, Surface, CapabilitiesSource};
 use mesh::Mesh;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
-const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
+//const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
 
 
 fn print_matrix(m: [[f32; 4]; 4]) {
@@ -127,9 +127,15 @@ fn render_pipeline<F>(display: &F,
     let transform_matrix = mesh.scale_and_center();
 
     // View matrix (convert to positions relative to camera)
-    // TODO: View matrix never changes. We could bake this at compile time and save a
-    // little processing.
-    let view_matrix = cgmath::Matrix4::look_at(CAM_POSITION, cgmath::Point3::origin(), cgmath::Vector3::unit_z());
+    //let view_matrix = cgmath::Matrix4::look_at(CAM_POSITION, cgmath::Point3::origin(), cgmath::Vector3::unit_z());
+    // These are precomputed values calculated usint the line above. We don't need to do this every time since they never change.
+    // In the future it may be better to doe this automatically using const fn or something.
+    let view_matrix = cgmath::Matrix4 {
+        x: cgmath::Vector4 { x: 0.894, y: -0.183, z:  0.408, w: 0.000, },
+        y: cgmath::Vector4 { x: 0.447, y:  0.365, z: -0.816, w: 0.000, },
+        z: cgmath::Vector4 { x: 0.000, y:  0.913, z:  0.408, w: 0.000, },
+        w: cgmath::Vector4 { x: 0.000, y:  0.000, z: -4.899, w: 1.000, },
+    };
     debug!("View:");
     print_matrix(view_matrix.into());
 
