@@ -7,13 +7,13 @@ varying vec3 v_normal;
 varying vec3 v_position;
 
 uniform mat4 perspective;
-uniform mat4 view;
-uniform mat4 model;
+//uniform mat4 view;
+//uniform mat4 model;
+uniform mat4 modelview;
 
 void main() {
-    // TODO: Move this to the CPU side. It only needs to be done once,
-    // not every time the shader is run.
-    mat4 modelview = view * model;
+    // These never change, so they can be computed CPU side.
+    //mat4 modelview = view * model;
 
     gl_Position = perspective * modelview * vec4(position, 1.0);
     

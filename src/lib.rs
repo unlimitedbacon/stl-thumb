@@ -154,8 +154,9 @@ fn render_pipeline<F>(display: &F,
     let light_dir = [-1.1, 0.4, 1.0f32];
 
     let uniforms = uniform! {
-        model: Into::<[[f32; 4]; 4]>::into(transform_matrix),
-        view: Into::<[[f32; 4]; 4]>::into(view_matrix),
+        //model: Into::<[[f32; 4]; 4]>::into(transform_matrix),
+        //view: Into::<[[f32; 4]; 4]>::into(view_matrix),
+        modelview: Into::<[[f32; 4]; 4]>::into(view_matrix * transform_matrix),
         perspective: Into::<[[f32; 4]; 4]>::into(perspective_matrix),
         u_light: light_dir,
         ambient_color: config.material.ambient,
