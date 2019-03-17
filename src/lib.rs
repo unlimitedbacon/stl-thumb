@@ -298,16 +298,7 @@ mod tests {
             stl_filename: "test_data/cube.stl".to_string(),
             img_filename: Some(img_filename.clone()),
             format: image::ImageOutputFormat::PNG,
-            width: 1024,
-            height: 768,
-            visible: false,
-            verbosity: 2,
-            material: config::Material {
-                ambient: [0.0, 0.0, 0.4],
-                diffuse: [0.0, 0.5, 1.0],
-                specular: [1.0, 1.0, 1.0],
-            },
-            background: (1.0, 1.0, 1.0, 0.0),
+            .. Default::default()
         };
 
         match fs::remove_file(&img_filename) {

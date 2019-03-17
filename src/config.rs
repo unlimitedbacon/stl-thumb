@@ -22,6 +22,26 @@ pub struct Config {
     pub background: (f32, f32, f32, f32),
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            stl_filename: "".to_string(),
+            img_filename: None,
+            format: ImageOutputFormat::PNG,
+            width: 1024,
+            height: 768,
+            visible: false,
+            verbosity: 0,
+            material: Material {
+                ambient: [0.0, 0.0, 0.4],
+                diffuse: [0.0, 0.5, 1.0],
+                specular: [1.0, 1.0, 1.0],
+            },
+            background: (1.0, 1.0, 1.0, 0.0),
+        }
+    }
+}
+
 impl Config {
     pub fn new() -> Config {
         // Define command line arguments
@@ -83,61 +103,39 @@ impl Config {
             )
             .get_matches();
 
-        let stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
-        let img_filename = match matches.value_of("IMG_FILE") {
-            Some(x) => Some(x.to_string()),
-            None => None,
-        };
-        let format = match matches.value_of("format") {
-            Some(x) => match_format(x),
+        let mut c = Config {.. Default::default()};
+
+        c.stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
+        matches.value_of("IMG_FILE").map(|x| c.img_filename = Some(x.to_string()));
+        match matches.value_of("format") {
+            Some(x) => c.format = match_format(x),
             None => {
-                match &img_filename {
+                match &c.img_filename {
                     Some(x) => {
                         match Path::new(x).extension() {
-                            Some(ext) => match_format(ext.to_str().unwrap()),
-                            None => ImageOutputFormat::PNG,
+                            Some(ext) => c.format = match_format(ext.to_str().unwrap()),
+                            _ => (),
                         }
                     },
-                    None => ImageOutputFormat::PNG,
+                    _ => (),
                 }
             },
         };
-        let width = matches.value_of("size").unwrap_or("1024");
-        let height = matches.value_of("size").unwrap_or("768");
-        let width = width.parse::<u32>()
-            .expect("Invalid size");
-        let height = height.parse::<u32>()
-            .expect("Invalid size");
-        let visible = matches.is_present("visible");
-        let verbosity = matches.occurrences_of("verbosity") as usize;
-        let material = match matches.values_of("material") {
-            Some(mut x) => Material {
+        matches.value_of("size").map(|x| c.width = x.parse::<u32>().expect("Invalid size"));
+        matches.value_of("size").map(|x| c.height = x.parse::<u32>().expect("Invalid size"));
+        c.visible = matches.is_present("visible");
+        c.verbosity = matches.occurrences_of("verbosity") as usize;
+        match matches.values_of("material") {
+            Some(mut x) => c.material = Material {
                 ambient: html_to_rgb(x.next().unwrap()),
                 diffuse: html_to_rgb(x.next().unwrap()),
                 specular: html_to_rgb(x.next().unwrap()),
             },
-            None => Material {
-                ambient: [0.0, 0.0, 0.4],
-                diffuse: [0.0, 0.5, 1.0],
-                specular: [1.0, 1.0, 1.0],
-            },
+            _ => (),
         };
-        let background = match matches.value_of("background") {
-            Some(x) => html_to_rgba(x),
-            None => (1.0, 1.0, 1.0, 0.0),
-        };
+        matches.value_of("background").map(|x| c.background = html_to_rgba(x));
 
-        Config {
-            stl_filename,
-            img_filename,
-            format,
-            width,
-            height,
-            visible,
-            verbosity,
-            material,
-            background,
-        }
+        c
     }
 
 }
@@ -153,7 +151,7 @@ fn match_format(ext: &str) -> ImageOutputFormat {
         "bmp" => ImageOutputFormat::BMP,
         _ => {
             warn!("Unsupported image format. Using PNG instead.");
-            ImageOutputFormat::PNG
+            Config{.. Default::default()}.format
         },
     }
 }
