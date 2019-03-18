@@ -11,7 +11,7 @@ Stl-thumb is a fast lightweight thumbnail generator for STL files. It can show p
 
 ### Windows
 
-Stl-thumb requires 64 bit Windows Vista or later. [Download the installer .exe](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for the latest release and run it.
+Stl-thumb requires 64 bit Windows 7 or later. [Download the installer .exe](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for the latest release and run it.
 
 The installer will tell the Windows shell to refresh the thumbnail cache, however this does not always seem to work. If your icons do not change then try using the [Disk Cleanup](https://en.wikipedia.org/wiki/Disk_Cleanup) utility to clear the thumbnail cache.
 
