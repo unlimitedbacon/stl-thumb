@@ -22,5 +22,5 @@ void main() {
     // vec3 R = reflect( normalize(-u_light), normalize(v_normal) );
     // float cosAlpha = clamp( dot(camera_dir,R), 0, 1 );
     // float specular = pow( cosAlpha, 4.0 );
-    fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    fragColor = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
 }
