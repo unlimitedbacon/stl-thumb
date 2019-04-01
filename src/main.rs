@@ -7,14 +7,7 @@ extern crate stl_thumb;
 use std::process;
 use stl_thumb::config::Config;
 
-#[cfg(target_os = "linux")]
-use std::env;
-
-fn main() {
-    // Workaround for issues with OpenGL 3.1 on Mesa 18.3
-    #[cfg(target_os = "linux")]
-    env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
-
+fn main() {    
     let config = Config::new();
 
     stderrlog::new()
