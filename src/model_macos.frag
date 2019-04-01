@@ -1,6 +1,6 @@
 #version 330
 
-out vec3 v_normal;
+in vec3 v_normal;
 in vec3 v_position;
 
 uniform vec3 u_light;
