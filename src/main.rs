@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate log;
 extern crate stderrlog;
-
 extern crate stl_thumb;
 
 use std::process;

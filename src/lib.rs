@@ -5,7 +5,7 @@ extern crate image;
 #[macro_use]
 extern crate log;
 extern crate mint;
-
+extern crate os_type;
 pub mod config;
 mod mesh;
 
@@ -97,9 +97,13 @@ fn render_pipeline<F>(display: &F,
 
     // Load and compile shaders
     // ------------------------
-
-    let vertex_shader_src = include_str!("model.vert");
-    let pixel_shader_src = include_str!("model.frag");
+    let mut vertex_shader_src = include_str!("model.vert");
+    let mut pixel_shader_src = include_str!("model.frag");
+    let os = os_type::current_platform();
+    if os.os_type == os_type::OSType::OSX {
+        vertex_shader_src = include_str!("model_macos.vert");
+        pixel_shader_src = include_str!("model_macos.frag");
+    }
 
     // TODO: Cache program binary
     let program = glium::Program::from_source(display, &vertex_shader_src, &pixel_shader_src, None);
