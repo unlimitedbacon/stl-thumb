@@ -2,6 +2,7 @@ extern crate cgmath;
 #[macro_use]
 extern crate glium;
 extern crate image;
+extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate mint;
@@ -9,13 +10,18 @@ extern crate mint;
 pub mod config;
 mod mesh;
 
+use libc::c_char;
 use std::error::Error;
+use std::ffi::CStr;
 use std::fs::File;
 use std::{io, thread, time};
 use config::Config;
 //use cgmath::EuclideanSpace;
 use glium::{glutin, Surface, CapabilitiesSource};
 use mesh::Mesh;
+
+#[cfg(target_os = "linux")]
+use std::env;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
@@ -288,6 +294,38 @@ pub fn run(config: &Config) -> Result<(), Box<Error>> {
     }
 
     Ok(())
+}
+
+
+#[no_mangle]
+pub extern fn render_to_buffer(stl_filename_c: *const c_char) -> bool {
+    // Workaround for issues with OpenGL 3.1 on Mesa 18.3
+    #[cfg(target_os = "linux")]
+    env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
+
+    // Check validity of provided file path string
+    let stl_filename_cstr = unsafe {
+        if stl_filename_c.is_null() {return false;}
+        CStr::from_ptr(stl_filename_c)
+    };
+    let stl_filename_str = match stl_filename_cstr.to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            error!("Invalid STL file path {:?}",stl_filename_cstr);
+            return false;
+        },
+    };
+
+    let mut config = Config {.. Default::default()};
+    config.stl_filename = stl_filename_str.to_string();
+    println!("STL-THUMB Rust :: {:?}",config.stl_filename);
+
+    if let Err(e) = run(&config) {
+        error!("Application error: {}", e);
+        return false;
+    }
+
+    true
 }
 
 
