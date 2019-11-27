@@ -2,17 +2,19 @@
 extern crate log;
 extern crate stderrlog;
 extern crate stl_thumb;
-extern crate os_type;
+//extern crate os_type;
 
 use std::process;
 use stl_thumb::config::Config;
 use std::env;
 
 fn main() {
+    /*
     let os = os_type::current_platform();
     if os.os_type == os_type::OSType::Arch {
         env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
     }
+    */
     let config = Config::new();
     stderrlog::new()
         .module(module_path!())
