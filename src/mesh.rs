@@ -95,7 +95,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn from_stl(mut stl_file: File) -> Result<Mesh, Box<Error>> {
+    pub fn from_stl(mut stl_file: File) -> Result<Mesh, Box<dyn Error>> {
         //let stl = stl_io::read_stl(&mut stl_file)?;
         //debug!("{:?}", stl);
         let mut stl_iter = stl_io::create_stl_reader(&mut stl_file)?;
