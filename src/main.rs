@@ -1,22 +1,21 @@
 #[macro_use]
 extern crate log;
 extern crate stderrlog;
-
 extern crate stl_thumb;
+//extern crate os_type;
 
 use std::process;
 use stl_thumb::config::Config;
-
-#[cfg(target_os = "linux")]
 use std::env;
 
 fn main() {
-    // Workaround for issues with OpenGL 3.1 on Mesa 18.3
-    #[cfg(target_os = "linux")]
-    env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
-
+    /*
+    let os = os_type::current_platform();
+    if os.os_type == os_type::OSType::Arch {
+        env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
+    }
+    */
     let config = Config::new();
-
     stderrlog::new()
         .module(module_path!())
         //.quiet(config.quiet)
