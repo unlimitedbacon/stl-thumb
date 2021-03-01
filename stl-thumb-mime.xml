@@ -19,4 +19,11 @@ shared-mime-info package.
     <alias type="model/x.stl-ascii"/>
     <alias type="model/x.stl-binary"/>
   </mime-type>
+  <mime-type type="application/prs.wavefront-obj">
+    <sub-class-of type="text/plain"/>
+    <comment>Wavefront 3D Object file</comment>
+    <icon name="unknown"/>
+    <glob-deleteall/>
+    <glob pattern="*.obj"/>
+  </mime-type>
 </mime-info>

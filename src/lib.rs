@@ -245,8 +245,11 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     // TODO: Add support for URIs instead of plain file names
     // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
     let stl_file = File::open(&config.stl_filename)?;
-    let mesh = Mesh::from_stl(stl_file)?;
-
+    let mesh = if config.stl_filename.ends_with(".obj") {
+        Mesh::from_obj(stl_file)?
+    } else {
+        Mesh::from_stl(stl_file)?
+    };
 
     // Create GL context
     // =================
