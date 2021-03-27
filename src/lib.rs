@@ -351,11 +351,14 @@ pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_fi
     };
 
     // Render
-    // TODO: Run renderer in seperate thread so OpenGL problems do not crash caller
-    let img = match run(&config) {
+
+    // Run renderer in seperate thread so OpenGL problems do not crash caller
+    let render_thread = thread::spawn(move || run(&config).unwrap());
+
+    let img = match render_thread.join() {
         Ok(s) => s,
         Err(e) => {
-            error!("Application error: {}", e);
+            error!("Application error: {:?}", e);
             return false;
         },
     };
