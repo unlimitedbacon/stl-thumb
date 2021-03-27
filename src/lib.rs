@@ -14,7 +14,7 @@ use libc::c_char;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fs::File;
-use std::{thread, time, slice};
+use std::{io, thread, time, slice};
 use config::Config;
 //use cgmath::EuclideanSpace;
 use glium::{glutin, Surface, CapabilitiesSource};
@@ -236,11 +236,27 @@ fn show_window(display: glium::Display,
     }
 }
 
-
-pub fn run(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
+pub fn render_to_window(config: &Config) -> Result<(), Box<dyn Error>> {
     // Get geometry from STL file
     // =========================
+    let stl_file = File::open(&config.stl_filename)?;
+    let mesh = Mesh::from_stl(stl_file)?;
 
+    // Create GL context
+    // =================
+    let (display, events_loop) = create_normal_display(&config)?;
+    let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+    let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+    let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+    render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+    show_window(display, events_loop, framebuffer, &config);
+
+    Ok(())
+}
+
+pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
+    // Get geometry from STL file
+    // =========================
     // TODO: Add support for URIs instead of plain file names
     // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
     let stl_file = File::open(&config.stl_filename)?;
@@ -250,45 +266,49 @@ pub fn run(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
 
     // Create GL context
     // =================
-
-    // 1. If visible create a normal context.
-    // 2. If not visible create a headless context.
-    // 3. If headless context creation fails, create a normal context with a hidden window.
-
-    if config.visible {
-        let (display, events_loop) = create_normal_display(&config)?;
-        // TODO: Find a way to not repeat these lines for creating the framebuffer
-        let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-        let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-        img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
-        show_window(display, events_loop, framebuffer, &config);
-    } else {
-        match create_headless_display(&config) {
-            Ok(display) => {
-                // Note: Headless context on Linux always seems to end up with a software
-                // renderer. I would prefer to try the normal context first (w/ hidden window)
-                // but it panics if creating the event loop fails, which is unrecoverable.
-                // Glutin is in the process of unifying the two types of contexts. Maybe then
-                // headless will use hardware acceleration.
-                let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-                let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-                let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-                img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
-            },
-            Err(e) => {
-                warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
-                let (display, _) = create_normal_display(&config)?;
-                let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-                let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-                let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-                img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
-            },
-        };
-    }
-
+    // 1. If not visible create a headless context.
+    // 2. If headless context creation fails, create a normal context with a hidden window.
+    match create_headless_display(&config) {
+        Ok(display) => {
+            // Note: Headless context on Linux always seems to end up with a software
+            // renderer. I would prefer to try the normal context first (w/ hidden window)
+            // but it panics if creating the event loop fails, which is unrecoverable.
+            // Glutin is in the process of unifying the two types of contexts. Maybe then
+            // headless will use hardware acceleration.
+            let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+            let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+            img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+        },
+        Err(e) => {
+            warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
+            let (display, _) = create_normal_display(&config)?;
+            let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+            let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+            img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+        },
+    };
 
     Ok(img)
+}
+
+pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
+    let img = render_to_image(&config)?;
+
+    // Output image
+    // ============
+    // Write to stdout if user did not specify a file
+    let mut output: Box<dyn io::Write> = match config.img_filename {
+        Some(ref x) => {
+            Box::new(std::fs::File::create(&x).unwrap())
+        },
+        None => Box::new(io::stdout()),
+    };
+    img.write_to(&mut output, config.format.to_owned())
+        .expect("Error saving image");
+    
+    Ok(())
 }
 
 /// Allows utilizing `stl-thumb` from C-like languages
@@ -302,7 +322,7 @@ pub fn run(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
 /// Returns `true` if succesful and `false` if unsuccesful.
 /// 
 /// # Example in C
-/// ```
+/// ```c
 /// const char* stl_filename_c = "3DBenchy.stl";
 /// int width = 256;
 /// int height = 256;
@@ -353,7 +373,7 @@ pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_fi
     // Render
 
     // Run renderer in seperate thread so OpenGL problems do not crash caller
-    let render_thread = thread::spawn(move || run(&config).unwrap());
+    let render_thread = thread::spawn(move || render_to_image(&config).unwrap());
 
     let img = match render_thread.join() {
         Ok(s) => s,
@@ -401,7 +421,7 @@ mod tests {
             }
         }
 
-        run(&config).expect("Error in run function");
+        render_to_file(&config).expect("Error in render function");
 
         let size = fs::metadata(img_filename)
             .expect("No file created")
