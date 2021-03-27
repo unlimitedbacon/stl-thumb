@@ -76,7 +76,7 @@ impl Config {
             )
             .arg(
                 clap::Arg::with_name("visible")
-                    .help("Display the thumbnail in a window")
+                    .help("Display the thumbnail in a window instead of saving a file")
                     .short("x")
                     .required(false)
             )

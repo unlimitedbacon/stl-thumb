@@ -5,6 +5,7 @@ extern crate stderrlog;
 extern crate stl_thumb;
 
 use std::process;
+use std::io;
 use stl_thumb::config::Config;
 
 #[cfg(target_os = "linux")]
@@ -31,9 +32,27 @@ fn main() {
         None => info!("Output: stdout\n"),
     };
 
-    if let Err(e) = stl_thumb::run(&config) {
-        error!("Application error: {}", e);
-        process::exit(1);
+    match stl_thumb::run(&config) {
+        Ok(img) => {
+            if !config.visible {
+                // Output image
+                // ============
+
+                // Write to stdout if user did not specify a file
+                let mut output: Box<dyn io::Write> = match config.img_filename {
+                    Some(ref x) => {
+                        Box::new(std::fs::File::create(&x).unwrap())
+                    },
+                    None => Box::new(io::stdout()),
+                };
+                img.write_to(&mut output, config.format.to_owned())
+                    .expect("Error saving image");
+            }
+        },
+        Err(e) => {
+            error!("Application error: {}", e);
+            process::exit(1);
+        }
     }
 }
 

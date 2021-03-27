@@ -2,6 +2,7 @@ extern crate cgmath;
 #[macro_use]
 extern crate glium;
 extern crate image;
+extern crate libc;
 #[macro_use]
 extern crate log;
 extern crate mint;
@@ -9,13 +10,18 @@ extern crate mint;
 pub mod config;
 mod mesh;
 
+use libc::c_char;
 use std::error::Error;
+use std::ffi::CStr;
 use std::fs::File;
-use std::{io, thread, time};
+use std::{thread, time, slice};
 use config::Config;
 //use cgmath::EuclideanSpace;
 use glium::{glutin, Surface, CapabilitiesSource};
 use mesh::Mesh;
+
+#[cfg(target_os = "linux")]
+use std::env;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
@@ -79,7 +85,7 @@ fn render_pipeline<F>(display: &F,
                       config: &Config,
                       mesh: Mesh,
                       framebuffer: &mut glium::framebuffer::SimpleFrameBuffer,
-                      texture: &glium::Texture2d)
+                      texture: &glium::Texture2d) -> image::DynamicImage
     where F: glium::backend::Facade,
 {
     // Graphics Stuff
@@ -174,21 +180,14 @@ fn render_pipeline<F>(display: &F,
     // TODO: Antialiasing
     // TODO: Shadows
 
-    // Save Image
-    // ==========
+    // Convert Image
+    // =============
 
     let pixels: glium::texture::RawImage2d<u8> = texture.read();
     let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
     let img = image::DynamicImage::ImageRgba8(img).flipv();
-    // Write to stdout if user did not specify a file
-    let mut output: Box<dyn io::Write> = match config.img_filename {
-        Some(ref x) => {
-            Box::new(std::fs::File::create(&x).unwrap())
-        },
-        None => Box::new(io::stdout()),
-    };
-    img.write_to(&mut output, config.format.to_owned())
-        .expect("Error saving image");
+
+    img
 }
 
 
@@ -238,7 +237,7 @@ fn show_window(display: glium::Display,
 }
 
 
-pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
+pub fn run(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
     // Get geometry from STL file
     // =========================
 
@@ -247,6 +246,7 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
     let stl_file = File::open(&config.stl_filename)?;
     let mesh = Mesh::from_stl(stl_file)?;
 
+    let img: image::DynamicImage;
 
     // Create GL context
     // =================
@@ -261,7 +261,7 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
         let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
         let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
         let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-        render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+        img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
         show_window(display, events_loop, framebuffer, &config);
     } else {
         match create_headless_display(&config) {
@@ -274,7 +274,7 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
                 let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
                 let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
                 let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-                render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+                img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
             },
             Err(e) => {
                 warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
@@ -282,12 +282,94 @@ pub fn run(config: &Config) -> Result<(), Box<dyn Error>> {
                 let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
                 let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
                 let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-                render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+                img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
             },
         };
     }
 
-    Ok(())
+
+    Ok(img)
+}
+
+/// Allows utilizing `stl-thumb` from C-like languages
+/// 
+/// This function renders an image of the file `stl_filename_c` and stores it into the buffer `buf_ptr`.
+/// 
+/// You must provide a memory buffer large enough to store the image. Images are written in 8-bit RGBA format,
+/// so the buffer must be at least `width`*`height`*4 bytes in size. `stl_filename_c` is a pointer to a C string with
+/// the file path.
+/// 
+/// Returns `true` if succesful and `false` if unsuccesful.
+/// 
+/// # Example in C
+/// ```
+/// const char* stl_filename_c = "3DBenchy.stl";
+/// int width = 256;
+/// int height = 256;
+/// 
+/// int img_size = width * height * 4;
+/// buf_ptr = (uchar *) malloc(img_size);
+/// 
+/// render_to_buffer(buf_ptr, width, height, stl_filename_c);
+/// ```
+#[no_mangle]
+pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_filename_c: *const c_char) -> bool {
+    // Workaround for issues with OpenGL 3.1 on Mesa 18.3
+    #[cfg(target_os = "linux")]
+    env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
+
+    // Check that the buffer pointer is valid
+    if buf_ptr.is_null() {
+        error!("Image buffer pointer is null");
+        return false;
+    };
+    let buf_size = (width * height * 4) as usize;
+    let buf = unsafe {slice::from_raw_parts_mut(buf_ptr, buf_size) };
+
+    // Check validity of provided file path string
+    let stl_filename_cstr = unsafe {
+        if stl_filename_c.is_null() {
+            error!("STL file path pointer is null");
+            return false;
+        }
+        CStr::from_ptr(stl_filename_c)
+    };
+    let stl_filename_str = match stl_filename_cstr.to_str() {
+        Ok(s) => s,
+        Err(_) => {
+            error!("Invalid STL file path {:?}",stl_filename_cstr);
+            return false;
+        },
+    };
+
+    // Setup configuration for the renderer
+    let config = Config {
+        stl_filename: stl_filename_str.to_string(),
+        width: width,
+        height: height,
+        .. Default::default()
+    };
+
+    // Render
+    // TODO: Run renderer in seperate thread so OpenGL problems do not crash caller
+    let img = match run(&config) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Application error: {}", e);
+            return false;
+        },
+    };
+
+    // Copy image to output buffer
+    match img.as_rgba8() {
+        Some(s) => buf.copy_from_slice(s),
+        None => {
+            error!("Unable to get image");
+            return false;
+        }
+    }
+
+    true
 }
 
 

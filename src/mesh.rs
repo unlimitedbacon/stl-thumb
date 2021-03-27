@@ -101,6 +101,7 @@ impl Mesh {
         let mut stl_iter = stl_io::create_stl_reader(&mut stl_file)?;
 
         // Get starting point for finding bounding box
+        // TODO: Remove unwraps so lib can fail gracefully instead of panicing
         let t1 = stl_iter.next().unwrap().unwrap();
         let v1 = t1.vertices[0];
 
