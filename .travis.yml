@@ -7,6 +7,9 @@ addons:
         packages:
             - libxxf86vm-dev
             - libosmesa6-dev
+            - extra-cmake-modules
+            - qtbase5-dev
+            - libkf5kio-dev
 
 matrix:
     include:
