@@ -32,10 +32,23 @@ install:
     - rustup target add $TARGET; true
 
 script:
+    - echo "Building"
     - cargo build --release --target $TARGET
+    - echo "Running tests"
     - if [ ! $DISABLE_TESTS ]; then RUST_BACKTRACE=1 xvfb-run cargo test --target $TARGET; fi
+    - echo "Building KDE plugin"
+    - git clone https://github.com/unlimitedbacon/stl-thumb-kde.git
+    - ln -s . stl-thumb-kde/stl-thumb
+    - cd stl-thumb-kde
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_BUILD_TYPE=Release ..
+    - make
+    - cd ../..
 
 before_deploy:
+    - cp stl-thumb-kde/build/stlthumbnail.so kde/
+    - cp stl-thumb-kde/stlthumbnail.desktop kde/
     - mkdir target/deploy/
     - cargo deb --target $TARGET
     - cp target/$TARGET/debian/*.deb target/deploy/
