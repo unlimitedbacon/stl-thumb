@@ -41,8 +41,8 @@ script:
     - if [ ! $DISABLE_TESTS ]; then RUST_BACKTRACE=1 xvfb-run cargo test --target $TARGET; fi
     - echo "Building KDE plugin"
     - git clone https://github.com/unlimitedbacon/stl-thumb-kde.git
-    - ln -s . stl-thumb-kde/stl-thumb
     - cd stl-thumb-kde
+    - ln -s .. stl-thumb
     - mkdir build
     - cd build
     - cmake -DCMAKE_BUILD_TYPE=Release ..
