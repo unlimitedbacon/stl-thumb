@@ -9,7 +9,7 @@ addons:
             - libosmesa6-dev
             - extra-cmake-modules
             - qtbase5-dev
-            - libkf5kio-dev
+            - kio-dev
 
 matrix:
     include:
