@@ -59,7 +59,5 @@ assets = [
     ["stl-thumb.thumbnailer",           "usr/share/thumbnailers/",  "644"],
     ["stl-thumb-mime.xml",              "usr/share/mime/packages/", "644"],
     ["libstl_thumb.h",                  "usr/include/",             "644"],
-    ["kde/stlthumbnail.so",             "usr/lib/qt/plugins/",      "755"],
-    ["kde/stlthumbnail.desktop",        "usr/share/kservices5/",    "644"],
     ["README.md",                       "usr/share/doc/stl-thumb/", "644"],
 ]
