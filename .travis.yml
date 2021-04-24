@@ -7,20 +7,17 @@ addons:
         packages:
             - libxxf86vm-dev
             - libosmesa6-dev
-            - extra-cmake-modules
-            - qtbase5-dev
-            - kio-dev
 
 matrix:
     include:
         - env: TARGET=x86_64-unknown-linux-gnu
-        - env: TARGET=armv7-unknown-linux-gnueabihf DISABLE_TESTS=1 DISABLE_KDE=1
+        - env: TARGET=armv7-unknown-linux-gnueabihf DISABLE_TESTS=1
           addons:
             apt:
                 packages:
                     - gcc-arm-linux-gnueabihf
                     - libc-dev-armhf-cross
-        - env: TARGET=aarch64-unknown-linux-gnu DISABLE_TESTS=1 DISABLE_KDE=1
+        - env: TARGET=aarch64-unknown-linux-gnu DISABLE_TESTS=1
           addons:
             apt:
                 packages:
@@ -35,28 +32,10 @@ install:
     - rustup target add $TARGET; true
 
 script:
-    - echo "Building"
     - cargo build --release --target $TARGET
-    - echo "Running tests"
     - if [ ! $DISABLE_TESTS ]; then RUST_BACKTRACE=1 xvfb-run cargo test --target $TARGET; fi
-    - echo "Building KDE plugin"
-    - |
-      if [ ! $DISABLE_KDE ]; then
-      mkdir target/release
-      cp target/$TARGET/release/* target/release/
-      git clone https://github.com/unlimitedbacon/stl-thumb-kde.git
-      cd stl-thumb-kde
-      ln -s .. stl-thumb
-      mkdir build
-      cd build
-      cmake -DCMAKE_BUILD_TYPE=Release ..
-      make
-      cd ../..
-      fi
 
 before_deploy:
-    - cp stl-thumb-kde/build/stlthumbnail.so kde/
-    - cp stl-thumb-kde/stlthumbnail.desktop kde/
     - mkdir target/deploy/
     - cargo deb --target $TARGET
     - cp target/$TARGET/debian/*.deb target/deploy/
