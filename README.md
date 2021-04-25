@@ -17,6 +17,8 @@ The installer will tell the Windows shell to refresh the thumbnail cache, howeve
 
 ### Linux
 
+Stl-thumb works with Gnome and most other similar desktop environements. If you are using the KDE desktop environment then you will also need to install the seperate [`stl-thumb-kde`](https://github.com/unlimitedbacon/stl-thumb-kde) package.
+
 Make sure that your file manager is set to generate previews for files larger than 1 MB. Most file managers have this setting under the Preview tab in their Preferences.
 
 #### Arch
@@ -29,10 +31,10 @@ $ yay -S stl-thumb
 
 #### Debian / Ubuntu
 
-[Download the .deb package](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for your platform (usually amd64) and install it. Packages are also available for armhf (Raspberry Pi) and arm64 (Pinebook and other SBCs).
+[Download the .deb package](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for your platform (usually amd64) and install it. Packages are also available for armhf (Raspberry Pi) and arm64 (Pine64 and other SBCs).
 
 ```
-$ sudo dpkg -i stl-thumb_0.3.0_amd64.deb
+$ sudo apt install ./stl-thumb_0.4.0_amd64.deb
 ```
 
 ## Command Line Usage
