@@ -51,3 +51,4 @@ deploy:
         repo: unlimitedbacon/stl-thumb
         tags: true
     skip_cleanup: true
+    draft: true
