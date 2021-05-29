@@ -5,7 +5,7 @@
 
 Stl-thumb is a fast lightweight thumbnail generator for STL files. It can show previews for STL files in your file manager on Linux and Windows. It is written in Rust and uses OpenGL.
 
-![Screenshot](https://user-images.githubusercontent.com/3131268/42529042-31d9bca6-8432-11e8-9ba8-87d9b72aaddb.png)
+![Screenshot](https://user-images.githubusercontent.com/3131268/116009182-f3f89c80-a5cc-11eb-817d-91e8a9fad279.png)
 
 ## Installation
 
@@ -16,6 +16,8 @@ Stl-thumb requires 64 bit Windows 7 or later. [Download the installer .exe](http
 The installer will tell the Windows shell to refresh the thumbnail cache, however this does not always seem to work. If your icons do not change then try using the [Disk Cleanup](https://en.wikipedia.org/wiki/Disk_Cleanup) utility to clear the thumbnail cache.
 
 ### Linux
+
+Stl-thumb works with Gnome and most other similar desktop environements. If you are using the KDE desktop environment then you will also need to install the seperate [`stl-thumb-kde`](https://github.com/unlimitedbacon/stl-thumb-kde) package.
 
 Make sure that your file manager is set to generate previews for files larger than 1 MB. Most file managers have this setting under the Preview tab in their Preferences.
 
@@ -29,10 +31,10 @@ $ yay -S stl-thumb
 
 #### Debian / Ubuntu
 
-[Download the .deb package](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for your platform (usually amd64) and install it. Packages are also available for armhf (Raspberry Pi) and arm64 (Pinebook and other SBCs).
+[Download the .deb package](https://github.com/unlimitedbacon/stl-thumb/releases/latest) for your platform (usually amd64) and install it. Packages are also available for armhf (Raspberry Pi) and arm64 (Pine64 and other SBCs).
 
 ```
-$ sudo dpkg -i stl-thumb_0.3.0_amd64.deb
+$ sudo apt install ./stl-thumb_0.4.0_amd64.deb
 ```
 
 ## Command Line Usage
