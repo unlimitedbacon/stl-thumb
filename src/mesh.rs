@@ -21,6 +21,7 @@ pub struct Normal {
 
 implement_vertex!(Normal, normal);
 
+#[derive(Clone)]
 pub struct BoundingBox {
     pub min: cgmath::Point3<f32>,
     pub max: cgmath::Point3<f32>,
@@ -86,6 +87,7 @@ impl fmt::Display for BoundingBox {
 }
 
 
+#[derive(Clone)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub normals: Vec<Normal>,

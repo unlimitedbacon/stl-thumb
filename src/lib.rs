@@ -18,6 +18,8 @@ use std::{io, thread, time, slice};
 use config::Config;
 //use cgmath::EuclideanSpace;
 use glium::{glutin, Surface, CapabilitiesSource};
+use glium::glutin::event_loop::{ControlFlow, EventLoop};
+use glium::glutin::dpi::PhysicalSize;
 use mesh::Mesh;
 
 #[cfg(target_os = "linux")]
@@ -36,7 +38,7 @@ fn print_matrix(m: [[f32; 4]; 4]) {
 }
 
 
-fn print_context_info(display: &glium::backend::Context) 
+fn print_context_info(display: &glium::backend::Context)
 {
     // Print context information
     info!("GL Version:   {:?}", display.get_opengl_version());
@@ -49,33 +51,38 @@ fn print_context_info(display: &glium::backend::Context)
 }
 
 
-fn create_normal_display(config: &Config) -> Result<(glium::Display, glutin::EventsLoop), Box<dyn Error>> {
-    let events_loop = glutin::EventsLoop::new();
-    let window_dim = glutin::dpi::LogicalSize::new(
-        config.width.into(),
-        config.height.into());
-    let window = glutin::WindowBuilder::new()
+fn create_normal_display(config: &Config) -> Result<(glium::Display, EventLoop<()>), Box<dyn Error>> {
+    let event_loop = EventLoop::new();
+    let window_dim = PhysicalSize::new(
+        config.width,
+        config.height);
+    let window = glutin::window::WindowBuilder::new()
         .with_title("stl-thumb")
-        .with_dimensions(window_dim)
-        .with_min_dimensions(window_dim)
-        .with_max_dimensions(window_dim)
-        .with_visibility(config.visible);
+        .with_inner_size(window_dim)
+        .with_min_inner_size(window_dim)
+        .with_max_inner_size(window_dim)
+        .with_visible(config.visible);
     let context = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
         //.with_multisampling(8);
         //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
-    let display = glium::Display::new(window, context, &events_loop)?;
+    let display = glium::Display::new(window, context, &event_loop)?;
     print_context_info(&display);
-    Ok((display,events_loop))
+    Ok((display, event_loop))
 }
 
 
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
-    let context = glutin::HeadlessRendererBuilder::new(config.width, config.height)
-        .with_gl(glutin::GlRequest::Latest)
-        //.with_depth_buffer(24)
-        .build()?;
-    let display = glium::HeadlessRenderer::new(context)?;
+    let event_loop = EventLoop::new();
+    let size = PhysicalSize::new(
+        config.width,
+        config.height);
+    let cb = glutin::ContextBuilder::new();
+    let context = cb.build_headless(&event_loop, size).unwrap();
+    let context = unsafe {
+        context.treat_as_current()
+    };
+    let display = glium::backend::glutin::headless::Headless::new(context)?;
     print_context_info(&display);
     Ok(display)
 }
@@ -83,7 +90,7 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
 
 fn render_pipeline<F>(display: &F,
                       config: &Config,
-                      mesh: Mesh,
+                      mesh: &Mesh,
                       framebuffer: &mut glium::framebuffer::SimpleFrameBuffer,
                       texture: &glium::Texture2d) -> image::DynamicImage
     where F: glium::backend::Facade,
@@ -111,7 +118,7 @@ fn render_pipeline<F>(display: &F,
     let program = glium::Program::from_source(display, &vertex_shader_src, &pixel_shader_src, None);
     let program = match program {
         Ok(p) => p,
-        Err(glium::CompilationError(err)) => {
+        Err(glium::CompilationError(err, _)) => {
             error!("{}",err);
             panic!("Compiling shaders");
         },
@@ -190,53 +197,7 @@ fn render_pipeline<F>(display: &F,
     img
 }
 
-
-fn show_window(display: glium::Display,
-               mut events_loop: glutin::EventsLoop,
-               framebuffer: glium::framebuffer::SimpleFrameBuffer,
-               config: &Config) {
-    // Wait until window is closed
-    // ===========================
-
-    if config.visible {
-        let mut closed = false;
-        let sleep_time = time::Duration::from_millis(10);
-        while !closed {
-            thread::sleep(sleep_time);
-            // Copy framebuffer to display
-            // TODO: I think theres some screwy srgb stuff going on here
-            let target = display.draw();
-            target.blit_from_simple_framebuffer(&framebuffer,
-                                                &glium::Rect {
-                                                    left: 0,
-                                                    bottom: 0,
-                                                    width: config.width,
-                                                    height: config.height,
-                                                },
-                                                &glium::BlitTarget {
-                                                    left: 0,
-                                                    bottom: 0,
-                                                    width: config.width as i32,
-                                                    height: config.height as i32,
-                                                },
-                                                glium::uniforms::MagnifySamplerFilter::Nearest);
-            target.finish().unwrap();
-            // Listing the events produced by the application and waiting to be received
-            events_loop.poll_events(|ev| {
-                match ev {
-                    glutin::Event::WindowEvent { event, .. } => match event {
-                        glutin::WindowEvent::CloseRequested => closed = true,
-                        glutin::WindowEvent::Destroyed => closed = true,
-                        _ => (),
-                    },
-                    _ => (),
-                }
-            });
-        }
-    }
-}
-
-pub fn render_to_window(config: &Config) -> Result<(), Box<dyn Error>> {
+pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
     // Get geometry from STL file
     // =========================
     let stl_file = File::open(&config.stl_filename)?;
@@ -244,14 +205,47 @@ pub fn render_to_window(config: &Config) -> Result<(), Box<dyn Error>> {
 
     // Create GL context
     // =================
-    let (display, events_loop) = create_normal_display(&config)?;
+    let (display, event_loop) = create_normal_display(&config)?;
+
+
+    let sleep_time = time::Duration::from_millis(10);
+
     let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
     let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-    let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-    render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
-    show_window(display, events_loop, framebuffer, &config);
 
-    Ok(())
+    event_loop.run(move |ev, _, control_flow| {
+        *control_flow = glutin::event_loop::ControlFlow::WaitUntil(std::time::Instant::now() + sleep_time);
+        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+
+        match ev {
+            glutin::event::Event::WindowEvent { event, .. } if event == glutin::event::WindowEvent::CloseRequested => {
+                *control_flow = ControlFlow::Exit;
+                return;
+            },
+            glutin::event::Event::NewEvents(cause) if cause == glutin::event::StartCause::Init => {
+                render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
+            },
+            _ => (),
+        }
+
+
+        let target = display.draw();
+        target.blit_from_simple_framebuffer(&framebuffer,
+                                            &glium::Rect {
+                                                left: 0,
+                                                bottom: 0,
+                                                width: config.width,
+                                                height: config.height,
+                                            },
+                                            &glium::BlitTarget {
+                                                left: 0,
+                                                bottom: 0,
+                                                width: config.width as i32,
+                                                height: config.height as i32,
+                                            },
+                                            glium::uniforms::MagnifySamplerFilter::Nearest);
+        target.finish().unwrap();
+    });
 }
 
 pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
@@ -278,7 +272,7 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
             let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
             let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
             let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-            img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+            img = render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
         },
         Err(e) => {
             warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
@@ -286,7 +280,7 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
             let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
             let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
             let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
-            img = render_pipeline(&display, &config, mesh, &mut framebuffer, &texture);
+            img = render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
         },
     };
 
@@ -307,29 +301,29 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
     };
     img.write_to(&mut output, config.format.to_owned())
         .expect("Error saving image");
-    
+
     Ok(())
 }
 
 /// Allows utilizing `stl-thumb` from C-like languages
-/// 
+///
 /// This function renders an image of the file `stl_filename_c` and stores it into the buffer `buf_ptr`.
-/// 
+///
 /// You must provide a memory buffer large enough to store the image. Images are written in 8-bit RGBA format,
 /// so the buffer must be at least `width`*`height`*4 bytes in size. `stl_filename_c` is a pointer to a C string with
 /// the file path.
-/// 
+///
 /// Returns `true` if succesful and `false` if unsuccesful.
-/// 
+///
 /// # Example in C
 /// ```c
 /// const char* stl_filename_c = "3DBenchy.stl";
 /// int width = 256;
 /// int height = 256;
-/// 
+///
 /// int img_size = width * height * 4;
 /// buf_ptr = (uchar *) malloc(img_size);
-/// 
+///
 /// render_to_buffer(buf_ptr, width, height, stl_filename_c);
 /// ```
 #[no_mangle]
