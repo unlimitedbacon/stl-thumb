@@ -4,12 +4,14 @@ use image::ImageOutputFormat;
 use std::path::Path;
 use std::f32;
 
+#[derive(Clone)]
 pub struct Material {
     pub ambient: [f32; 3],
     pub diffuse: [f32; 3],
     pub specular: [f32; 3],
 }
 
+#[derive(Clone)]
 pub struct Config {
     pub stl_filename: String,
     pub img_filename: Option<String>,

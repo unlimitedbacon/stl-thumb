@@ -32,7 +32,7 @@ fn main() {
     };
 
     if config.visible {
-        if let Err(e) = stl_thumb::render_to_window(&config) {
+        if let Err(e) = stl_thumb::render_to_window(config) {
             error!("Application error: {}", e);
             process::exit(1);
         }
