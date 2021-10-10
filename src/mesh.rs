@@ -2,8 +2,8 @@ extern crate cgmath;
 extern crate stl_io;
 
 use std::error::Error;
-use std::fs::File;
 use std::fmt;
+use std::fs::File;
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -86,7 +86,6 @@ impl fmt::Display for BoundingBox {
     }
 }
 
-
 #[derive(Clone)]
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
@@ -129,7 +128,7 @@ impl Mesh {
             warn!("STL file missing surface normals");
         }
         info!("Bounds:");
-        info!("{}",mesh.bounds);
+        info!("{}", mesh.bounds);
         info!("Center:\t{:?}", mesh.bounds.center());
         info!("Triangles processed:\t{}\n", face_count);
 
@@ -139,9 +138,7 @@ impl Mesh {
     fn process_tri(&mut self, tri: &stl_io::Triangle) {
         for v in tri.vertices.iter() {
             self.bounds.expand(&v);
-            self.vertices.push( Vertex {
-                position: *v,
-            });
+            self.vertices.push(Vertex { position: *v });
             //debug!("{:?}", v);
         }
         // Use normal from STL file if it is provided, otherwise calculate it ourselves
@@ -155,9 +152,7 @@ impl Mesh {
         //debug!("{:?}",tri.normal);
         // TODO: Figure out how to get away with 1 normal instead of 3
         for _ in 0..3 {
-            self.normals.push( Normal{
-                normal: n,
-            });
+            self.normals.push(Normal { normal: n });
         }
     }
 
@@ -167,18 +162,16 @@ impl Mesh {
     pub fn scale_and_center(&self) -> cgmath::Matrix4<f32> {
         // Move center to origin
         let center = self.bounds.center();
-        let translation_vector = cgmath::Vector3::new(
-            -center.x,
-            -center.y,
-            -center.z,
-        );
+        let translation_vector = cgmath::Vector3::new(-center.x, -center.y, -center.z);
         let translation_matrix = cgmath::Matrix4::from_translation(translation_vector);
         // Scale
-        let longest = self.bounds.length()
+        let longest = self
+            .bounds
+            .length()
             .max(self.bounds.width())
             .max(self.bounds.height());
         let scale = 2.0 / longest;
-        info!("Scale:\t{}",scale);
+        info!("Scale:\t{}", scale);
         let scale_matrix = cgmath::Matrix4::from_scale(scale);
         let matrix = scale_matrix * translation_matrix;
         matrix
@@ -208,9 +201,5 @@ fn normal(tri: &stl_io::Triangle) -> stl_io::Normal {
     let w = p3 - p1;
     let n = v.cross(w);
     let mag = n.x.abs() + n.y.abs() + n.z.abs();
-    [
-        n.x / mag,
-        n.y / mag,
-        n.z / mag,
-    ]
+    [n.x / mag, n.y / mag, n.z / mag]
 }

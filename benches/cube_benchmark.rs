@@ -11,7 +11,7 @@ fn cube() {
         img_filename: Some("cube.png".to_string()),
         width: 1024,
         height: 768,
-        .. Default::default()
+        ..Default::default()
     };
 
     stl_thumb::run(&config).expect("Error in run function");

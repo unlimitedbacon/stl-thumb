@@ -10,16 +10,16 @@ extern crate mint;
 pub mod config;
 mod mesh;
 
+use config::Config;
 use libc::c_char;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fs::File;
-use std::{io, thread, time, slice};
-use config::Config;
+use std::{io, slice, thread, time};
 //use cgmath::EuclideanSpace;
-use glium::{glutin, Surface, CapabilitiesSource};
-use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::glutin::dpi::PhysicalSize;
+use glium::glutin::event_loop::{ControlFlow, EventLoop};
+use glium::{glutin, CapabilitiesSource, Surface};
 use mesh::Mesh;
 
 #[cfg(target_os = "linux")]
@@ -34,17 +34,17 @@ use glium::glutin::platform::windows::EventLoopExtWindows;
 const CAM_FOV_DEG: f32 = 30.0;
 //const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
 
-
 fn print_matrix(m: [[f32; 4]; 4]) {
     for i in 0..4 {
-        debug!("{:.3}\t{:.3}\t{:.3}\t{:.3}", m[i][0], m[i][1], m[i][2], m[i][3]);
+        debug!(
+            "{:.3}\t{:.3}\t{:.3}\t{:.3}",
+            m[i][0], m[i][1], m[i][2], m[i][3]
+        );
     }
     debug!("");
 }
 
-
-fn print_context_info(display: &glium::backend::Context)
-{
+fn print_context_info(display: &glium::backend::Context) {
     // Print context information
     info!("GL Version:   {:?}", display.get_opengl_version());
     info!("GL Version:   {}", display.get_opengl_version_string());
@@ -52,36 +52,34 @@ fn print_context_info(display: &glium::backend::Context)
     info!("Vendor:       {}", display.get_opengl_vendor_string());
     info!("Renderer      {}", display.get_opengl_renderer_string());
     info!("Free GPU Mem: {:?}", display.get_free_video_memory());
-    info!("Depth Bits:   {:?}\n", display.get_capabilities().depth_bits);
+    info!(
+        "Depth Bits:   {:?}\n",
+        display.get_capabilities().depth_bits
+    );
 }
 
-
-fn create_normal_display(config: &Config) -> Result<(glium::Display, EventLoop<()>), Box<dyn Error>> {
+fn create_normal_display(
+    config: &Config,
+) -> Result<(glium::Display, EventLoop<()>), Box<dyn Error>> {
     let event_loop = EventLoop::new();
-    let window_dim = PhysicalSize::new(
-        config.width,
-        config.height);
+    let window_dim = PhysicalSize::new(config.width, config.height);
     let window = glutin::window::WindowBuilder::new()
         .with_title("stl-thumb")
         .with_inner_size(window_dim)
         .with_min_inner_size(window_dim)
         .with_max_inner_size(window_dim)
         .with_visible(config.visible);
-    let cb = glutin::ContextBuilder::new()
-        .with_depth_buffer(24);
-        //.with_multisampling(8);
-        //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
+    let cb = glutin::ContextBuilder::new().with_depth_buffer(24);
+    //.with_multisampling(8);
+    //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
     let display = glium::Display::new(window, cb, &event_loop)?;
     print_context_info(&display);
     Ok((display, event_loop))
 }
 
-
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
     let event_loop: EventLoop<()> = EventLoop::new_any_thread();
-    let size = PhysicalSize::new(
-        config.width,
-        config.height);
+    let size = PhysicalSize::new(config.width, config.height);
     let cb = glutin::ContextBuilder::new();
 
     #[cfg(target_os = "linux")]
@@ -98,30 +96,30 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
                     Err(e) => {
                         warn!("Unable to create headless GL context. Trying osmesa instead. Reason: {:?}", e);
                         cb.build_osmesa(size)?
-                    },
+                    }
                 }
-            },
+            }
         }
     };
 
     #[cfg(not(target_os = "linux"))]
     let context = cb.build_headless(&event_loop, size)?;
 
-    let context = unsafe {
-        context.treat_as_current()
-    };
+    let context = unsafe { context.treat_as_current() };
     let display = glium::backend::glutin::headless::Headless::new(context)?;
     print_context_info(&display);
     Ok(display)
 }
 
-
-fn render_pipeline<F>(display: &F,
-                      config: &Config,
-                      mesh: &Mesh,
-                      framebuffer: &mut glium::framebuffer::SimpleFrameBuffer,
-                      texture: &glium::Texture2d) -> image::DynamicImage
-    where F: glium::backend::Facade,
+fn render_pipeline<F>(
+    display: &F,
+    config: &Config,
+    mesh: &Mesh,
+    framebuffer: &mut glium::framebuffer::SimpleFrameBuffer,
+    texture: &glium::Texture2d,
+) -> image::DynamicImage
+where
+    F: glium::backend::Facade,
 {
     // Graphics Stuff
     // ==============
@@ -130,10 +128,10 @@ fn render_pipeline<F>(display: &F,
         depth: glium::Depth {
             test: glium::draw_parameters::DepthTest::IfLess,
             write: true,
-            .. Default::default()
+            ..Default::default()
         },
         backface_culling: glium::draw_parameters::BackfaceCullingMode::CullClockwise,
-        .. Default::default()
+        ..Default::default()
     };
 
     // Load and compile shaders
@@ -147,10 +145,10 @@ fn render_pipeline<F>(display: &F,
     let program = match program {
         Ok(p) => p,
         Err(glium::CompilationError(err, _)) => {
-            error!("{}",err);
+            error!("{}", err);
             panic!("Compiling shaders");
-        },
-        Err(err) => panic!("{}",err),
+        }
+        Err(err) => panic!("{}", err),
     };
 
     // Send mesh data to GPU
@@ -172,10 +170,30 @@ fn render_pipeline<F>(display: &F,
     // These are precomputed values calculated usint the line above. We don't need to do this every time since they never change.
     // In the future it may be better to doe this automatically using const fn or something.
     let view_matrix = cgmath::Matrix4 {
-        x: cgmath::Vector4 { x: 0.894, y: -0.183, z:  0.408, w: 0.000, },
-        y: cgmath::Vector4 { x: 0.447, y:  0.365, z: -0.816, w: 0.000, },
-        z: cgmath::Vector4 { x: 0.000, y:  0.913, z:  0.408, w: 0.000, },
-        w: cgmath::Vector4 { x: 0.000, y:  0.000, z: -4.899, w: 1.000, },
+        x: cgmath::Vector4 {
+            x: 0.894,
+            y: -0.183,
+            z: 0.408,
+            w: 0.000,
+        },
+        y: cgmath::Vector4 {
+            x: 0.447,
+            y: 0.365,
+            z: -0.816,
+            w: 0.000,
+        },
+        z: cgmath::Vector4 {
+            x: 0.000,
+            y: 0.913,
+            z: 0.408,
+            w: 0.000,
+        },
+        w: cgmath::Vector4 {
+            x: 0.000,
+            y: 0.000,
+            z: -4.899,
+            w: 1.000,
+        },
     };
     debug!("View:");
     print_matrix(view_matrix.into());
@@ -210,7 +228,14 @@ fn render_pipeline<F>(display: &F,
 
     // Fills background color and clears depth buffer
     framebuffer.clear_color_and_depth(config.background, 1.0);
-    framebuffer.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
+    framebuffer
+        .draw(
+            (&vertex_buf, &normal_buf),
+            &indices,
+            &program,
+            &uniforms,
+            &params,
+        )
         .unwrap();
     // TODO: Antialiasing
     // TODO: Shadows
@@ -219,7 +244,8 @@ fn render_pipeline<F>(display: &F,
     // =============
 
     let pixels: glium::texture::RawImage2d<u8> = texture.read();
-    let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned()).unwrap();
+    let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned())
+        .unwrap();
     let img = image::DynamicImage::ImageRgba8(img).flipv();
 
     img
@@ -235,43 +261,52 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
     // =================
     let (display, event_loop) = create_normal_display(&config)?;
 
-
     let sleep_time = time::Duration::from_millis(10);
 
     let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-    let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+    let depthtexture =
+        glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
 
     event_loop.run(move |ev, _, control_flow| {
-        *control_flow = glutin::event_loop::ControlFlow::WaitUntil(std::time::Instant::now() + sleep_time);
-        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+        *control_flow =
+            glutin::event_loop::ControlFlow::WaitUntil(std::time::Instant::now() + sleep_time);
+        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+            &display,
+            &texture,
+            &depthtexture,
+        )
+        .unwrap();
 
         match ev {
-            glutin::event::Event::WindowEvent { event, .. } if event == glutin::event::WindowEvent::CloseRequested => {
+            glutin::event::Event::WindowEvent { event, .. }
+                if event == glutin::event::WindowEvent::CloseRequested =>
+            {
                 *control_flow = ControlFlow::Exit;
                 return;
-            },
+            }
             glutin::event::Event::NewEvents(cause) if cause == glutin::event::StartCause::Init => {
                 render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
-            },
+            }
             _ => (),
         }
 
-
         let target = display.draw();
-        target.blit_from_simple_framebuffer(&framebuffer,
-                                            &glium::Rect {
-                                                left: 0,
-                                                bottom: 0,
-                                                width: config.width,
-                                                height: config.height,
-                                            },
-                                            &glium::BlitTarget {
-                                                left: 0,
-                                                bottom: 0,
-                                                width: config.width as i32,
-                                                height: config.height as i32,
-                                            },
-                                            glium::uniforms::MagnifySamplerFilter::Nearest);
+        target.blit_from_simple_framebuffer(
+            &framebuffer,
+            &glium::Rect {
+                left: 0,
+                bottom: 0,
+                width: config.width,
+                height: config.height,
+            },
+            &glium::BlitTarget {
+                left: 0,
+                bottom: 0,
+                width: config.width as i32,
+                height: config.height as i32,
+            },
+            glium::uniforms::MagnifySamplerFilter::Nearest,
+        );
         target.finish().unwrap();
     });
 }
@@ -293,18 +328,35 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
     match create_headless_display(&config) {
         Ok(display) => {
             let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-            let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+            let depthtexture =
+                glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
+                    .unwrap();
+            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+                &display,
+                &texture,
+                &depthtexture,
+            )
+            .unwrap();
             img = render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
-        },
+        }
         Err(e) => {
-            warn!("Unable to create headless GL context. Trying hidden window instead. Reason: {:?}", e);
+            warn!(
+                "Unable to create headless GL context. Trying hidden window instead. Reason: {:?}",
+                e
+            );
             let (display, _) = create_normal_display(&config)?;
             let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-            let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
-            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
+            let depthtexture =
+                glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
+                    .unwrap();
+            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+                &display,
+                &texture,
+                &depthtexture,
+            )
+            .unwrap();
             img = render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
-        },
+        }
     };
 
     Ok(img)
@@ -317,9 +369,7 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
     // ============
     // Write to stdout if user did not specify a file
     let mut output: Box<dyn io::Write> = match config.img_filename {
-        Some(ref x) => {
-            Box::new(std::fs::File::create(&x).unwrap())
-        },
+        Some(ref x) => Box::new(std::fs::File::create(&x).unwrap()),
         None => Box::new(io::stdout()),
     };
     img.write_to(&mut output, config.format.to_owned())
@@ -350,7 +400,12 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
 /// render_to_buffer(buf_ptr, width, height, stl_filename_c);
 /// ```
 #[no_mangle]
-pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_filename_c: *const c_char) -> bool {
+pub extern "C" fn render_to_buffer(
+    buf_ptr: *mut u8,
+    width: u32,
+    height: u32,
+    stl_filename_c: *const c_char,
+) -> bool {
     // Workaround for issues with OpenGL 3.1 on Mesa 18.3
     #[cfg(target_os = "linux")]
     env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
@@ -361,7 +416,7 @@ pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_fi
         return false;
     };
     let buf_size = (width * height * 4) as usize;
-    let buf = unsafe {slice::from_raw_parts_mut(buf_ptr, buf_size) };
+    let buf = unsafe { slice::from_raw_parts_mut(buf_ptr, buf_size) };
 
     // Check validity of provided file path string
     let stl_filename_cstr = unsafe {
@@ -374,9 +429,9 @@ pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_fi
     let stl_filename_str = match stl_filename_cstr.to_str() {
         Ok(s) => s,
         Err(_) => {
-            error!("Invalid STL file path {:?}",stl_filename_cstr);
+            error!("Invalid STL file path {:?}", stl_filename_cstr);
             return false;
-        },
+        }
     };
 
     // Setup configuration for the renderer
@@ -384,7 +439,7 @@ pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_fi
         stl_filename: stl_filename_str.to_string(),
         width: width,
         height: height,
-        .. Default::default()
+        ..Default::default()
     };
 
     // Render
@@ -397,7 +452,7 @@ pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_fi
         Err(e) => {
             error!("Application error: {:?}", e);
             return false;
-        },
+        }
     };
 
     // Copy image to output buffer
@@ -412,13 +467,12 @@ pub extern fn render_to_buffer(buf_ptr: *mut u8, width: u32, height: u32, stl_fi
     true
 }
 
-
 // TODO: Move tests to their own file
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::fs;
     use std::io::ErrorKind;
-    use super::*;
 
     #[test]
     fn cube() {
@@ -427,7 +481,7 @@ mod tests {
             stl_filename: "test_data/cube.stl".to_string(),
             img_filename: Some(img_filename.clone()),
             format: image::ImageOutputFormat::PNG,
-            .. Default::default()
+            ..Default::default()
         };
 
         match fs::remove_file(&img_filename) {
@@ -440,9 +494,7 @@ mod tests {
 
         render_to_file(&config).expect("Error in render function");
 
-        let size = fs::metadata(img_filename)
-            .expect("No file created")
-            .len();
+        let size = fs::metadata(img_filename).expect("No file created").len();
 
         assert_ne!(0, size);
     }

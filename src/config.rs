@@ -1,8 +1,8 @@
 extern crate clap;
 
 use image::ImageOutputFormat;
-use std::path::Path;
 use std::f32;
+use std::path::Path;
 
 #[derive(Clone)]
 pub struct Material {
@@ -105,43 +105,49 @@ impl Config {
             )
             .get_matches();
 
-        let mut c = Config {.. Default::default()};
+        let mut c = Config {
+            ..Default::default()
+        };
 
         c.stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
-        matches.value_of("IMG_FILE").map(|x| c.img_filename = Some(x.to_string()));
+        matches
+            .value_of("IMG_FILE")
+            .map(|x| c.img_filename = Some(x.to_string()));
         match matches.value_of("format") {
             Some(x) => c.format = match_format(x),
-            None => {
-                match &c.img_filename {
-                    Some(x) => {
-                        match Path::new(x).extension() {
-                            Some(ext) => c.format = match_format(ext.to_str().unwrap()),
-                            _ => (),
-                        }
-                    },
+            None => match &c.img_filename {
+                Some(x) => match Path::new(x).extension() {
+                    Some(ext) => c.format = match_format(ext.to_str().unwrap()),
                     _ => (),
-                }
+                },
+                _ => (),
             },
         };
-        matches.value_of("size").map(|x| c.width = x.parse::<u32>().expect("Invalid size"));
-        matches.value_of("size").map(|x| c.height = x.parse::<u32>().expect("Invalid size"));
+        matches
+            .value_of("size")
+            .map(|x| c.width = x.parse::<u32>().expect("Invalid size"));
+        matches
+            .value_of("size")
+            .map(|x| c.height = x.parse::<u32>().expect("Invalid size"));
         c.visible = matches.is_present("visible");
         c.verbosity = matches.occurrences_of("verbosity") as usize;
         match matches.values_of("material") {
-            Some(mut x) => c.material = Material {
-                ambient: html_to_rgb(x.next().unwrap()),
-                diffuse: html_to_rgb(x.next().unwrap()),
-                specular: html_to_rgb(x.next().unwrap()),
-            },
+            Some(mut x) => {
+                c.material = Material {
+                    ambient: html_to_rgb(x.next().unwrap()),
+                    diffuse: html_to_rgb(x.next().unwrap()),
+                    specular: html_to_rgb(x.next().unwrap()),
+                }
+            }
             _ => (),
         };
-        matches.value_of("background").map(|x| c.background = html_to_rgba(x));
+        matches
+            .value_of("background")
+            .map(|x| c.background = html_to_rgba(x));
 
         c
     }
-
 }
-
 
 fn match_format(ext: &str) -> ImageOutputFormat {
     match ext.to_lowercase().as_ref() {
@@ -153,8 +159,11 @@ fn match_format(ext: &str) -> ImageOutputFormat {
         "bmp" => ImageOutputFormat::BMP,
         _ => {
             warn!("Unsupported image format. Using PNG instead.");
-            Config{.. Default::default()}.format
-        },
+            Config {
+                ..Default::default()
+            }
+            .format
+        }
     }
 }
 
