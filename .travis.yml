@@ -5,6 +5,7 @@ cache: cargo
 addons:
     apt:
         packages:
+            - libxcursor-dev
             - libxxf86vm-dev
             - libosmesa6-dev
             - xvfb
