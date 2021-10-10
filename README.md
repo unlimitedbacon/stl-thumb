@@ -1,6 +1,6 @@
 # stl-thumb
 
-[![Build Status](https://travis-ci.org/unlimitedbacon/stl-thumb.svg?branch=master)](https://travis-ci.org/unlimitedbacon/stl-thumb)
+[![Build Status](https://travis-ci.com/unlimitedbacon/stl-thumb.svg?branch=master)](https://travis-ci.org/unlimitedbacon/stl-thumb)
 [![Build Status](https://ci.appveyor.com/api/projects/status/exol1llladgo3f98/branch/master?svg=true)](https://ci.appveyor.com/project/unlimitedbacon/stl-thumb/branch/master)
 
 Stl-thumb is a fast lightweight thumbnail generator for STL files. It can show previews for STL files in your file manager on Linux and Windows. It is written in Rust and uses OpenGL.
