@@ -23,7 +23,12 @@ use glium::glutin::dpi::PhysicalSize;
 use mesh::Mesh;
 
 #[cfg(target_os = "linux")]
+use glium::glutin::platform::unix::EventLoopExtUnix;
+use glium::glutin::platform::unix::HeadlessContextExt;
 use std::env;
+
+#[cfg(target_os = "windows")]
+use glium::glutin::platform::windows::EventLoopExtWindows;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
@@ -62,23 +67,46 @@ fn create_normal_display(config: &Config) -> Result<(glium::Display, EventLoop<(
         .with_min_inner_size(window_dim)
         .with_max_inner_size(window_dim)
         .with_visible(config.visible);
-    let context = glutin::ContextBuilder::new()
+    let cb = glutin::ContextBuilder::new()
         .with_depth_buffer(24);
         //.with_multisampling(8);
         //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
-    let display = glium::Display::new(window, context, &event_loop)?;
+    let display = glium::Display::new(window, cb, &event_loop)?;
     print_context_info(&display);
     Ok((display, event_loop))
 }
 
 
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
-    let event_loop = EventLoop::new();
+    let event_loop: EventLoop<()> = EventLoop::new_any_thread();
     let size = PhysicalSize::new(
         config.width,
         config.height);
     let cb = glutin::ContextBuilder::new();
-    let context = cb.build_headless(&event_loop, size).unwrap();
+
+    #[cfg(target_os = "linux")]
+    let context = {
+        // On Linux, try surfaceless, headless, and osmesa in that order
+        // This is the procedure recommended in
+        // https://github.com/rust-windowing/glutin/blob/bab33a84dfb094ff65c059400bed7993434638e2/glutin_examples/examples/headless.rs
+        match cb.clone().build_surfaceless(&event_loop) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!("Unable to create surfaceless GL context. Trying headless instead. Reason: {:?}", e);
+                match cb.clone().build_headless(&event_loop, size) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        warn!("Unable to create headless GL context. Trying osmesa instead. Reason: {:?}", e);
+                        cb.build_osmesa(size)?
+                    },
+                }
+            },
+        }
+    };
+
+    #[cfg(not(target_os = "linux"))]
+    let context = cb.build_headless(&event_loop, size)?;
+
     let context = unsafe {
         context.treat_as_current()
     };
@@ -264,11 +292,6 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
     // 2. If headless context creation fails, create a normal context with a hidden window.
     match create_headless_display(&config) {
         Ok(display) => {
-            // Note: Headless context on Linux always seems to end up with a software
-            // renderer. I would prefer to try the normal context first (w/ hidden window)
-            // but it panics if creating the event loop fails, which is unrecoverable.
-            // Glutin is in the process of unifying the two types of contexts. Maybe then
-            // headless will use hardware acceleration.
             let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
             let depthtexture = glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
             let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(&display, &texture, &depthtexture).unwrap();
