@@ -37,6 +37,17 @@ $ yay -S stl-thumb
 $ sudo apt install ./stl-thumb_0.4.0_amd64.deb
 ```
 
+## Building
+
+Building the tool itself:
+```
+$ cargo build
+```
+Building the .deb-package:
+```
+$ cargo install cargo-deb #this is an additional dependency
+$ cargo deb
+```
 ## Command Line Usage
 
 ```
