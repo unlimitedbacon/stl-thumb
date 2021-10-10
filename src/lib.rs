@@ -23,8 +23,8 @@ use glium::glutin::dpi::PhysicalSize;
 use mesh::Mesh;
 
 #[cfg(target_os = "linux")]
-use glium::glutin::platform::unix::EventLoopExtUnix;
-use glium::glutin::platform::unix::HeadlessContextExt;
+use glium::glutin::platform::unix::{EventLoopExtUnix, HeadlessContextExt};
+#[cfg(target_os = "linux")]
 use std::env;
 
 #[cfg(target_os = "windows")]
