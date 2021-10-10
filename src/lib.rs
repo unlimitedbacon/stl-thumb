@@ -23,7 +23,11 @@ use glium::glutin::dpi::PhysicalSize;
 use mesh::Mesh;
 
 #[cfg(target_os = "linux")]
+use glium::glutin::platform::unix::EventLoopExtUnix;
 use std::env;
+
+#[cfg(target_os = "windows")]
+use glium::glutin::platform::windows::EventLoopExtWindows;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
@@ -73,7 +77,7 @@ fn create_normal_display(config: &Config) -> Result<(glium::Display, EventLoop<(
 
 
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
-    let event_loop = EventLoop::new();
+    let event_loop: EventLoop<()> = EventLoop::new_any_thread();
     let size = PhysicalSize::new(
         config.width,
         config.height);
