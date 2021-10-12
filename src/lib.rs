@@ -15,7 +15,7 @@ use libc::c_char;
 use std::error::Error;
 use std::ffi::CStr;
 use std::fs::File;
-use std::{io, slice, thread, time};
+use std::{io, panic, slice, thread, time};
 //use cgmath::EuclideanSpace;
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
@@ -77,33 +77,61 @@ fn create_normal_display(
     Ok((display, event_loop))
 }
 
+#[cfg(not(target_os = "linux"))]
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
     let event_loop: EventLoop<()> = EventLoop::new_any_thread();
     let size = PhysicalSize::new(config.width, config.height);
     let cb = glutin::ContextBuilder::new();
+    let context = cb.build_headless(&event_loop, size)?;
 
-    #[cfg(target_os = "linux")]
-    let context = {
-        // On Linux, try surfaceless, headless, and osmesa in that order
-        // This is the procedure recommended in
-        // https://github.com/rust-windowing/glutin/blob/bab33a84dfb094ff65c059400bed7993434638e2/glutin_examples/examples/headless.rs
-        match cb.clone().build_surfaceless(&event_loop) {
-            Ok(c) => c,
-            Err(e) => {
-                warn!("Unable to create surfaceless GL context. Trying headless instead. Reason: {:?}", e);
-                match cb.clone().build_headless(&event_loop, size) {
+    let context = unsafe { context.treat_as_current() };
+    let display = glium::backend::glutin::headless::Headless::new(context)?;
+    print_context_info(&display);
+    Ok(display)
+}
+
+#[cfg(target_os = "linux")]
+fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
+    let size = PhysicalSize::new(config.width, config.height);
+    let cb = glutin::ContextBuilder::new();
+    let context: glium::glutin::Context<glium::glutin::NotCurrent>;
+
+    // Linux requires an elaborate chain of attempts and fallbacks to find the ideal type of opengl context.
+
+    // If there is no X server of Wayland, creating the event loop will fail first.
+    // If this happens we catch the panic and fall back to osmesa software rendering, which doesn't require an event loop.
+    let event_loop_result: Result<EventLoop<()>, _> =
+        panic::catch_unwind(|| EventLoop::new_any_thread());
+
+    match event_loop_result {
+        Ok(event_loop) => {
+            context = {
+                // Try surfaceless, headless, and osmesa in that order
+                // This is the procedure recommended in
+                // https://github.com/rust-windowing/glutin/blob/bab33a84dfb094ff65c059400bed7993434638e2/glutin_examples/examples/headless.rs
+                match cb.clone().build_surfaceless(&event_loop) {
                     Ok(c) => c,
                     Err(e) => {
-                        warn!("Unable to create headless GL context. Trying osmesa instead. Reason: {:?}", e);
-                        cb.build_osmesa(size)?
+                        warn!("Unable to create surfaceless GL context. Trying headless instead. Reason: {:?}", e);
+                        match cb.clone().build_headless(&event_loop, size) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                warn!("Unable to create headless GL context. Trying osmesa software renderer instead. Reason: {:?}", e);
+                                cb.build_osmesa(size)?
+                            }
+                        }
                     }
                 }
-            }
+            };
+        }
+        Err(e) => {
+            warn!(
+                "No Wayland or X server. Falling back to osmesa software rendering. Reason {:?}",
+                e
+            );
+            context = cb.build_osmesa(size)?;
         }
     };
-
-    #[cfg(not(target_os = "linux"))]
-    let context = cb.build_headless(&event_loop, size)?;
 
     let context = unsafe { context.treat_as_current() };
     let display = glium::backend::glutin::headless::Headless::new(context)?;
