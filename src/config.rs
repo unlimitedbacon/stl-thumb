@@ -35,9 +35,9 @@ impl Default for Config {
             visible: false,
             verbosity: 0,
             material: Material {
-                ambient: [0.0, 0.0, 0.4],
-                diffuse: [0.0, 0.5, 1.0],
-                specular: [1.0, 1.0, 1.0],
+                ambient:  [0.00, 0.13, 0.26],
+                diffuse:  [0.38, 0.63, 1.00],
+                specular: [1.00, 1.00, 1.00],
             },
             background: (1.0, 1.0, 1.0, 0.0),
         }
