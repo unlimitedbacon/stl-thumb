@@ -7,7 +7,7 @@ use std::fs::File;
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
-    position: stl_io::Vertex,
+    position: [f32; 3],
     //texcoords: [f32; 2],
 }
 
@@ -16,7 +16,7 @@ implement_vertex!(Vertex, position);
 
 #[derive(Copy, Clone)]
 pub struct Normal {
-    normal: stl_io::Normal,
+    normal: [f32; 3],
 }
 
 implement_vertex!(Normal, normal);
@@ -136,23 +136,23 @@ impl Mesh {
     }
 
     fn process_tri(&mut self, tri: &stl_io::Triangle) {
-        for v in tri.vertices.iter() {
+        for v in tri.vertices {
             self.bounds.expand(&v);
-            self.vertices.push(Vertex { position: *v });
+            self.vertices.push(Vertex { position: v.into() });
             //debug!("{:?}", v);
         }
         // Use normal from STL file if it is provided, otherwise calculate it ourselves
-        let n: stl_io::Normal;
-        if tri.normal == [0.0, 0.0, 0.0] {
+        let n: Normal;
+        if tri.normal == stl_io::Vector::new([0.0, 0.0, 0.0]) {
             self.stl_had_normals = false;
             n = normal(&tri);
         } else {
-            n = tri.normal;
+            n = Normal{ normal: tri.normal.into() };
         }
         //debug!("{:?}",tri.normal);
         // TODO: Figure out how to get away with 1 normal instead of 3
         for _ in 0..3 {
-            self.normals.push(Normal { normal: n });
+            self.normals.push(n);
         }
     }
 
@@ -193,13 +193,13 @@ impl fmt::Display for Mesh {
 // TODO: The GPU can probably do this a lot faster than we can.
 // See if there is an option for offloading this.
 // Probably need to use a geometry shader (not supported in Opengl ES).
-fn normal(tri: &stl_io::Triangle) -> stl_io::Normal {
-    let p1: cgmath::Vector3<f32> = tri.vertices[0].into();
-    let p2: cgmath::Vector3<f32> = tri.vertices[1].into();
-    let p3: cgmath::Vector3<f32> = tri.vertices[2].into();
+fn normal(tri: &stl_io::Triangle) -> Normal {
+    let p1 = cgmath::Vector3::new( tri.vertices[0][0], tri.vertices[0][1], tri.vertices[0][2] );
+    let p2 = cgmath::Vector3::new( tri.vertices[1][0], tri.vertices[1][1], tri.vertices[1][2] );
+    let p3 = cgmath::Vector3::new( tri.vertices[2][0], tri.vertices[2][1], tri.vertices[2][2] );
     let v = p2 - p1;
     let w = p3 - p1;
     let n = v.cross(w);
     let mag = n.x.abs() + n.y.abs() + n.z.abs();
-    [n.x / mag, n.y / mag, n.z / mag]
+    Normal{ normal: [n.x / mag, n.y / mag, n.z / mag] }
 }

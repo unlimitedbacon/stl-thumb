@@ -98,7 +98,7 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
 
     // Linux requires an elaborate chain of attempts and fallbacks to find the ideal type of opengl context.
 
-    // If there is no X server of Wayland, creating the event loop will fail first.
+    // If there is no X server or Wayland, creating the event loop will fail first.
     // If this happens we catch the panic and fall back to osmesa software rendering, which doesn't require an event loop.
     let event_loop_result: Result<EventLoop<()>, _> =
         panic::catch_unwind(|| EventLoop::new_any_thread());
