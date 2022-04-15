@@ -29,14 +29,14 @@ impl Default for Config {
         Config {
             stl_filename: "".to_string(),
             img_filename: None,
-            format: ImageOutputFormat::PNG,
+            format: ImageOutputFormat::Png,
             width: 1024,
             height: 768,
             visible: false,
             verbosity: 0,
             material: Material {
-                ambient:  [0.00, 0.13, 0.26],
-                diffuse:  [0.38, 0.63, 1.00],
+                ambient: [0.00, 0.13, 0.26],
+                diffuse: [0.38, 0.63, 1.00],
                 specular: [1.00, 1.00, 1.00],
             },
             background: (1.0, 1.0, 1.0, 0.0),
@@ -47,58 +47,58 @@ impl Default for Config {
 impl Config {
     pub fn new() -> Config {
         // Define command line arguments
-        let matches = clap::App::new(env!("CARGO_PKG_NAME"))
+        let matches = clap::Command::new(env!("CARGO_PKG_NAME"))
             .version(env!("CARGO_PKG_VERSION"))
             .author(env!("CARGO_PKG_AUTHORS"))
             .arg(
-                clap::Arg::with_name("STL_FILE")
+                clap::Arg::new("STL_FILE")
                     .help("STL file")
                     .required(true)
                     .index(1),
             )
             .arg(
-                clap::Arg::with_name("IMG_FILE")
+                clap::Arg::new("IMG_FILE")
                     .help("Thumbnail image file. If this is omitted, the image data will be dumped to stdout.")
                     .index(2),
             )
             .arg(
-                clap::Arg::with_name("format")
+                clap::Arg::new("format")
                     .help("The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP")
-                    .short("f")
+                    .short('f')
                     .long("format")
                     .takes_value(true)
             )
             .arg(
-                clap::Arg::with_name("size")
+                clap::Arg::new("size")
                     .help("Size of thumbnail (square)")
-                    .short("s")
+                    .short('s')
                     .long("size")
                     .takes_value(true)
                     .required(false)
             )
             .arg(
-                clap::Arg::with_name("visible")
+                clap::Arg::new("visible")
                     .help("Display the thumbnail in a window instead of saving a file")
-                    .short("x")
+                    .short('x')
                     .required(false)
             )
             .arg(
-                clap::Arg::with_name("verbosity")
-                    .short("v")
-                    .multiple(true)
+                clap::Arg::new("verbosity")
+                    .short('v')
+                    .multiple_occurrences(true)
                     .help("Increase message verbosity")
             )
             .arg(
-                clap::Arg::with_name("material")
+                clap::Arg::new("material")
                     .help("Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue.")
-                    .short("m")
+                    .short('m')
                     .long("material")
                     .value_names(&["ambient","diffuse","specular"])
             )
             .arg(
-                clap::Arg::with_name("background")
+                clap::Arg::new("background")
                     .help("The background color with transparency (rgba). Default is ffffff00.")
-                    .short("b")
+                    .short('b')
                     .long("background")
                     .takes_value(true)
                     .required(false)
@@ -151,12 +151,12 @@ impl Config {
 
 fn match_format(ext: &str) -> ImageOutputFormat {
     match ext.to_lowercase().as_ref() {
-        "png" => ImageOutputFormat::PNG,
-        "jpeg" => ImageOutputFormat::JPEG(95),
-        "jpg" => ImageOutputFormat::JPEG(95),
-        "gif" => ImageOutputFormat::GIF,
-        "ico" => ImageOutputFormat::ICO,
-        "bmp" => ImageOutputFormat::BMP,
+        "png" => ImageOutputFormat::Png,
+        "jpeg" => ImageOutputFormat::Jpeg(95),
+        "jpg" => ImageOutputFormat::Jpeg(95),
+        "gif" => ImageOutputFormat::Gif,
+        "ico" => ImageOutputFormat::Ico,
+        "bmp" => ImageOutputFormat::Bmp,
         _ => {
             warn!("Unsupported image format. Using PNG instead.");
             Config {

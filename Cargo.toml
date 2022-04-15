@@ -21,13 +21,13 @@ travis-ci = { repository = "unlimitedbacon/stl-thumb" }
 
 [dependencies]
 cgmath = { version = "0.18.0", features = ["mint"] }
-clap = "2.31.2"
+clap = "3.1.9"
 glium = "0.31.0"
-image = "0.19.0"
+image = "0.24.1"
 libc = "0.2"
-log = "0.4.1"
-mint = "0.5.0"
-stderrlog = "0.4.0"
+log = "0.4.16"
+mint = "0.5.9"
+stderrlog = "0.5.1"
 stl_io = "0.6.0"
 
 [build-dependencies]

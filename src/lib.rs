@@ -393,15 +393,24 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
 pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
     let img = render_to_image(&config)?;
 
-    // Output image
-    // ============
+    // Choose output
     // Write to stdout if user did not specify a file
     let mut output: Box<dyn io::Write> = match config.img_filename {
         Some(ref x) => Box::new(std::fs::File::create(&x).unwrap()),
         None => Box::new(io::stdout()),
     };
-    img.write_to(&mut output, config.format.to_owned())
-        .expect("Error saving image");
+
+    // write_to() requires a seekable writer for performance reasons.
+    // So we create an in-memory buffer and then dump that to the output.
+    // I wonder if it would be better to use std::io::BufWriter for writing files instead.
+    let mut buff: Vec<u8> = Vec::new();
+    let mut cursor = io::Cursor::new(&mut buff);
+
+    // Encode image with format
+    img.write_to(&mut cursor, config.format.to_owned())?;
+
+    output.write_all(&buff)?;
+    output.flush()?;
 
     Ok(())
 }
@@ -508,7 +517,7 @@ mod tests {
         let config = Config {
             stl_filename: "test_data/cube.stl".to_string(),
             img_filename: Some(img_filename.clone()),
-            format: image::ImageOutputFormat::PNG,
+            format: image::ImageOutputFormat::Png,
             ..Default::default()
         };
 
