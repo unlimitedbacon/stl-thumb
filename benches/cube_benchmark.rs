@@ -14,7 +14,7 @@ fn cube() {
         ..Default::default()
     };
 
-    stl_thumb::run(&config).expect("Error in run function");
+    stl_thumb::render_to_file(&config).expect("Error in run function");
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
