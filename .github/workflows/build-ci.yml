@@ -11,9 +11,7 @@ env:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v3
     - uses: actions/cache@v3
@@ -33,3 +31,18 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: RUST_BACKTRACE=1 cargo test --verbose
+
+  package:
+    needs: [build]
+    name: Package
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Cargo Deb
+      run: cargo install cargo-deb
+    - name: Package
+      run: cargo deb
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ubuntu-18.04-package
+        path: target/debian/*.deb
