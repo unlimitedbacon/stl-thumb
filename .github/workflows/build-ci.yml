@@ -28,8 +28,8 @@ jobs:
     - name: Install packages
       run: |
         sudo apt-get update
-        sudo apt-get install libxcursor-dev libxxf86vm-dev libosmesa6-dev xvfb
+        sudo apt-get install libosmesa6-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: RUST_BACKTRACE=1 xvfb-run cargo test --verbose
+      run: RUST_BACKTRACE=1 cargo test --verbose
