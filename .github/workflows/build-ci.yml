@@ -23,7 +23,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runs-on }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-buildtest-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install packages
       run: |
         sudo apt-get update
@@ -50,7 +50,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runs-on }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runnner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Prep build environment
       run: |
         rustup target add ${{ matrix.target }}
