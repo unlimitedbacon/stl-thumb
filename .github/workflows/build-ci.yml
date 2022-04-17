@@ -38,8 +38,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        include:
-          target: [x86_64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, aarch64-unknown-linux-gnu]
+        target: [x86_64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, aarch64-unknown-linux-gnu]
     steps:
     - uses: actions/checkout@v3
     - uses: actions/cache@v3
