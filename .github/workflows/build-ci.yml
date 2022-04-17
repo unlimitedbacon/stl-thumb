@@ -11,18 +11,19 @@ env:
 
 jobs:
   build:
+    name: Build and Test
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v3
-    #- uses: actions/cache@v3
-    #  with:
-    #    path: |
-    #      ~/.cargo/bin/
-    #      ~/.cargo/registry/index/
-    #      ~/.cargo/registry/cache/
-    #      ~/.cargo/git/db/
-    #      target/
-    #    key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runs-on }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install packages
       run: |
         sudo apt-get update
@@ -49,9 +50,11 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Install Cargo Deb
-      run: cargo install cargo-deb
+        key: ${{ runs-on }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Prep build environment
+      run: |
+        rustup target add ${{ matrix.target }}
+        cargo install cargo-deb
     - name: Package
       run: cargo deb --target ${{ matrix.target }}
     - uses: actions/upload-artifact@v3
