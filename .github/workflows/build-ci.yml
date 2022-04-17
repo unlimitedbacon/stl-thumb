@@ -36,13 +36,17 @@ jobs:
     needs: [build]
     name: Package
     runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        include:
+          target: [x86_64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, aarch64-unknown-linux-gnu]
     steps:
     - uses: actions/checkout@v3
     - name: Install Cargo Deb
       run: cargo install cargo-deb
     - name: Package
-      run: cargo deb
+      run: cargo deb --target ${{ matrix.target }}
     - uses: actions/upload-artifact@v3
       with:
-        name: ubuntu-18.04-package
-        path: target/debian/*.deb
+        name: deb-${{ matrix.target }}
+        path: target/${{ matrix.target }}/debian/*.deb
