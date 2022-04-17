@@ -51,6 +51,10 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Install packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu libc-dev-armhf-cross libc-dev-arm64-cross
     - name: Prep build environment
       run: |
         rustup target add ${{ matrix.target }}
