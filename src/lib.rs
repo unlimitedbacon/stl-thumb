@@ -18,6 +18,7 @@ use std::ffi::CStr;
 use std::fs::File;
 use std::{io, panic, slice, thread, time};
 //use cgmath::EuclideanSpace;
+use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::{glutin, CapabilitiesSource, Surface};
@@ -148,7 +149,7 @@ fn render_pipeline<F>(
     texture: &glium::Texture2d,
 ) -> image::DynamicImage
 where
-    F: glium::backend::Facade,
+    F: Facade,
 {
     // Graphics Stuff
     // ==============
@@ -256,11 +257,11 @@ where
     // ----
 
     // Create FXAA system
-    let fxaa = fxaa::FxaaSystem::new(&display);
+    let fxaa = fxaa::FxaaSystem::new(display);
 
-    fxaa::draw(&fxaa, &mut framebuffer, true, |target| {
+    fxaa::draw(&fxaa, framebuffer, true, |target| {
         // Fills background color and clears depth buffer
-        target.clear_color_and_depth(BACKGROUND_COLOR, 1.0);
+        target.clear_color_and_depth(config.background, 1.0);
         target.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
             .unwrap();
         // TODO: Shadows

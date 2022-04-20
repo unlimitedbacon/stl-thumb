@@ -30,7 +30,7 @@ struct SpriteVertex {
 implement_vertex!(SpriteVertex, position, i_tex_coords);
 
 impl FxaaSystem {
-    pub fn new<F: ?Sized>(facade: &F) -> FxaaSystem where F: Facade + Clone {
+    pub fn new<F: ?Sized>(facade: &F) -> FxaaSystem where F: Facade {
         FxaaSystem {
             context: facade.get_context().clone(),
 
