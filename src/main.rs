@@ -7,7 +7,14 @@ extern crate stl_thumb;
 use std::process;
 use stl_thumb::config::Config;
 
+#[cfg(target_os = "linux")]
+use std::env;
+
 fn main() {
+    // Workaround for issues with OpenGL 3.1 on Mesa 18.3
+    #[cfg(target_os = "linux")]
+    env::set_var("MESA_GL_VERSION_OVERRIDE", "2.1");
+
     let config = Config::new();
 
     stderrlog::new()
@@ -24,9 +31,16 @@ fn main() {
         None => info!("Output: stdout\n"),
     };
 
-    if let Err(e) = stl_thumb::run(&config) {
-        error!("Application error: {}", e);
-        process::exit(1);
+    if config.visible {
+        if let Err(e) = stl_thumb::render_to_window(config) {
+            error!("Application error: {}", e);
+            process::exit(1);
+        }
+    } else {
+        if let Err(e) = stl_thumb::render_to_file(&config) {
+            error!("Application error: {}", e);
+            process::exit(1);
+        }
     }
 }
 

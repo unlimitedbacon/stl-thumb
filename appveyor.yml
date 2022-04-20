@@ -1,0 +1,23 @@
+environment:
+  matrix:
+    - TARGET: x86_64-pc-windows-msvc
+
+install:
+  - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+  - rustup-init -y --default-toolchain stable --default-host %TARGET%
+  - SET PATH=%PATH%;%USERPROFILE%\.cargo\bin
+  - SET PATH=%PATH%;C:\MinGW\bin
+  - rustc -V
+  - cargo -V
+
+test_script:
+  - cargo build --release
+  # Appveyor does not have OpenGL, so tests will not work
+  #- cargo test
+
+cache:
+  - C:\Users\appveyor\.cargo\registry
+  - target
+
+# Building is done in the test phase, so we disable Appveyor's build phase.
+build: false

@@ -1,27 +1,40 @@
 [package]
 name = "stl-thumb"
-version = "0.1.1"
+version = "0.4.1"
 authors = ["Tyler Anderson <unlimitedbacon@gmail.com>"]
 description = "A fast lightweight thumbnail generator for STL files"
 readme = "README.md"
 repository = "https://github.com/unlimitedbacon/stl-thumb"
 license = "MIT"
 
+[lib]
+name = "stl_thumb"
+path = "src/lib.rs"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "stl-thumb"
+path = "src/main.rs"
+
 [badges]
 travis-ci = { repository = "unlimitedbacon/stl-thumb" }
 
 [dependencies]
-cgmath = { version = "0.16.1", features = ["mint"] }
-clap = "2.31.2"
-# There is a bug in winit 0.16.0 that prevents hidden windows from working on Windows.
-# Temporarily using this fork of glium because it pulls glutin 0.18.0, and thus winit 0.17.0.
-# This should be changed back once the fork is merged and glium 0.23.0 is released.
-glium = { git = "https://github.com/expenses/glium.git", rev = "49c12e75e1f321958ed4b7f90b04faf9bf9cd299" }
-image = "0.19.0"
-log = "0.4.1"
-mint = "0.5.0"
-stderrlog = "0.4.0"
-stl_io = "0.3.7"
+cgmath = { version = "0.18.0", features = ["mint"] }
+clap = "3.1.9"
+glium = "0.31.0"
+image = "0.24.1"
+libc = "0.2"
+log = "0.4.16"
+mint = "0.5.9"
+stderrlog = "0.5.1"
+stl_io = "0.6.0"
+
+[patch.crates-io]
+glutin = { git = 'https://github.com/unlimitedbacon/glutin.git' }
+
+[build-dependencies]
+cbindgen = "0.18.*"
 
 [dev-dependencies]
 criterion = "0.2"
@@ -32,7 +45,7 @@ harness = false
 
 [package.metadata.deb]
 license-file = ["LICENSE", "3"]
-depends = "libgl1, libc6, libgcc1"
+depends = "libgl1, libc6, libgcc1, libosmesa6-dev"
 extended-description = """\
 Stl-thumb is a fast lightweight thumbnail generator for STL files. \
 It can show previews for STL files in your file manager on Linux and Windows. \
@@ -40,8 +53,11 @@ It is written in Rust and uses OpenGL. """
 section = "graphics"
 priority = "optional"
 assets = [
-    ["target/release/stl-thumb", "usr/bin/", "755"],
-    ["stl-thumb.thumbnailer", "usr/share/thumbnailers/", "644"],
-    ["stl-thumb-mime.xml", "usr/share/mime/packages/", "644"],
-    ["README.md", "usr/share/doc/stl-thumb/", "644"],
+    ["target/release/stl-thumb",        "usr/bin/",                 "755"],
+    ["target/release/libstl_thumb.so",  "usr/lib/",                 "755"],
+    ["target/release/libstl_thumb.a",   "usr/lib/",                 "644"],
+    ["stl-thumb.thumbnailer",           "usr/share/thumbnailers/",  "644"],
+    ["stl-thumb-mime.xml",              "usr/share/mime/packages/", "644"],
+    ["libstl_thumb.h",                  "usr/include/",             "644"],
+    ["README.md",                       "usr/share/doc/stl-thumb/", "644"],
 ]

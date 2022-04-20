@@ -8,13 +8,13 @@ use stl_thumb::config::Config;
 fn cube() {
     let config = Config {
         stl_filename: "test_data/cube.stl".to_string(),
-        img_filename: "cube.png".to_string(),
+        img_filename: Some("cube.png".to_string()),
         width: 1024,
         height: 768,
-        visible: false,
+        ..Default::default()
     };
 
-    stl_thumb::run(&config).expect("Error in run function");
+    stl_thumb::render_to_file(&config).expect("Error in run function");
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
