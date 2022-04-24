@@ -17,7 +17,7 @@ use std::error::Error;
 use std::ffi::CStr;
 use std::fs::File;
 use std::{io, panic, slice, thread, time};
-//use cgmath::EuclideanSpace;
+use cgmath::EuclideanSpace;
 use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
@@ -34,7 +34,7 @@ use glium::glutin::platform::windows::EventLoopExtWindows;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
-//const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
+const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
 
 fn print_matrix(m: [[f32; 4]; 4]) {
     for i in 0..4 {
@@ -196,35 +196,7 @@ where
     let transform_matrix = mesh.scale_and_center();
 
     // View matrix (convert to positions relative to camera)
-    //let view_matrix = cgmath::Matrix4::look_at(CAM_POSITION, cgmath::Point3::origin(), cgmath::Vector3::unit_z());
-    // These are precomputed values calculated usint the line above. We don't need to do this every time since they never change.
-    // In the future it may be better to doe this automatically using const fn or something.
-    let view_matrix = cgmath::Matrix4 {
-        x: cgmath::Vector4 {
-            x: 0.894,
-            y: -0.183,
-            z: 0.408,
-            w: 0.000,
-        },
-        y: cgmath::Vector4 {
-            x: 0.447,
-            y: 0.365,
-            z: -0.816,
-            w: 0.000,
-        },
-        z: cgmath::Vector4 {
-            x: 0.000,
-            y: 0.913,
-            z: 0.408,
-            w: 0.000,
-        },
-        w: cgmath::Vector4 {
-            x: 0.000,
-            y: 0.000,
-            z: -4.899,
-            w: 1.000,
-        },
-    };
+    let view_matrix = cgmath::Matrix4::look_at_rh(CAM_POSITION, cgmath::Point3::origin(), cgmath::Vector3::unit_z());
     debug!("View:");
     print_matrix(view_matrix.into());
 
@@ -267,20 +239,6 @@ where
             .unwrap();
         // TODO: Shadows
     });
-
-    // Fills background color and clears depth buffer
-    //framebuffer.clear_color_and_depth(config.background, 1.0);
-    //framebuffer
-    //    .draw(
-    //        (&vertex_buf, &normal_buf),
-    //        &indices,
-    //        &program,
-    //        &uniforms,
-    //        &params,
-    //    )
-    //    .unwrap();
-    // TODO: Antialiasing
-    // TODO: Shadows
 
     // Convert Image
     // =============
