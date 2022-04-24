@@ -58,7 +58,7 @@ jobs:
     - name: Prep build environment
       run: |
         rustup target add ${{ matrix.target }}
-        cargo install cargo-deb
+        cargo install cargo-deb --force
     - name: Package
       run: cargo deb --target ${{ matrix.target }}
     - uses: actions/upload-artifact@v3
