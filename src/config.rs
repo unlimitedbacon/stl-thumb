@@ -39,7 +39,7 @@ impl Default for Config {
                 diffuse: [0.38, 0.63, 1.00],
                 specular: [1.00, 1.00, 1.00],
             },
-            background: (1.0, 1.0, 1.0, 0.0),
+            background: (0.0, 0.0, 0.0, 0.0),
         }
     }
 }

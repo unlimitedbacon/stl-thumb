@@ -29,6 +29,8 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,
 
     // Calculate luminance
     vec3 luma = vec3(0.299, 0.587, 0.114);
+    vec4 luma4 = vec4(0.299, 0.587, 0.114, 0.0);
+
     float lumaNW = dot(rgbNW, luma);
     float lumaNE = dot(rgbNE, luma);
     float lumaSW = dot(rgbSW, luma);
@@ -51,18 +53,39 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,
               dir * rcpDirMin)) * inverseVP;
     
     // Blending
-    vec3 rgbA = 0.5 * (
-        texture2D(tex, fragCoord * inverseVP + dir * (1.0 / 3.0 - 0.5)).xyz +
-        texture2D(tex, fragCoord * inverseVP + dir * (2.0 / 3.0 - 0.5)).xyz);
-    vec3 rgbB = rgbA * 0.5 + 0.25 * (
-        texture2D(tex, fragCoord * inverseVP + dir * -0.5).xyz +
-        texture2D(tex, fragCoord * inverseVP + dir * 0.5).xyz);
+    // A lot of stuff here is my attempt to incorporate the alpha channel into the blending. I don't think I did it right. ¯\_(ツ)_/¯
+    // A bit of the background color still bleeds through around the edges of the image. It's hardly noticable, though.
+    vec2 coordAA = fragCoord * inverseVP + dir * (1.0 / 3.0 - 0.5);
+    vec2 coordAB = fragCoord * inverseVP + dir * (2.0 / 3.0 - 0.5);
+    float alphaAA = texture2D(tex, coordAA).a;
+    float alphaAB = texture2D(tex, coordAB).a;
+    float alphaATotal = alphaAA + alphaAB;
+    float weightAA = alphaAA / alphaATotal;
+    float weightAB = alphaAB / alphaATotal;
+    vec4 rgbA = vec4( // Multiply by 2
+        texture2D(tex, coordAA).rgb*weightAA + texture2D(tex, coordAB).rgb*weightAB,
+        0.5 * (alphaAA + alphaAB)
+    );
 
-    float lumaB = dot(rgbB, luma);
+    vec2 coordBC = fragCoord * inverseVP + dir * -0.5;
+    vec2 coordBD = fragCoord * inverseVP + dir * 0.5;
+    float alphaBC = texture2D(tex, coordBC).a;
+    float alphaBD = texture2D(tex, coordBD).a;
+    float alphaBTotal = alphaAA + alphaAB + alphaBC + alphaBD;
+    float weightBA = alphaAA / alphaBTotal;
+    float weightBB = alphaAB / alphaBTotal;
+    float weightBC = alphaBC / alphaBTotal;
+    float weightBD = alphaBD / alphaBTotal;
+    vec4 rgbB = vec4(
+        texture2D(tex, coordAA).rgb*weightBA + texture2D(tex, coordAB).rgb*weightBB + texture2D(tex, coordBC).rgb*weightBC + texture2D(tex, coordBD).rgb*weightBD,
+        0.25 * (alphaAA + alphaAB + alphaBC + alphaBD)
+    );
+
+    float lumaB = dot(rgbB, luma4);
     if ((lumaB < lumaMin) || (lumaB > lumaMax))
-        color = vec4(rgbA, texColor.a);
+        color = rgbA;
     else
-        color = vec4(rgbB, texColor.a);
+        color = rgbB;
     return color;
 }
 
