@@ -8,21 +8,21 @@ extern crate log;
 extern crate mint;
 
 pub mod config;
-mod mesh;
 mod fxaa;
+mod mesh;
 
-use config::{Config,AAMethod};
-use libc::c_char;
-use std::error::Error;
-use std::ffi::CStr;
-use std::fs::File;
-use std::{io, panic, slice, thread, time};
 use cgmath::EuclideanSpace;
+use config::{AAMethod, Config};
 use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::{glutin, CapabilitiesSource, Surface};
+use libc::c_char;
 use mesh::Mesh;
+use std::error::Error;
+use std::ffi::CStr;
+use std::fs::File;
+use std::{io, panic, slice, thread, time};
 
 #[cfg(target_os = "linux")]
 use glium::glutin::platform::unix::{EventLoopExtUnix, HeadlessContextExt};
@@ -34,7 +34,11 @@ use glium::glutin::platform::windows::EventLoopExtWindows;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
-const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {x: 2.0, y: -4.0, z: 2.0};
+const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {
+    x: 2.0,
+    y: -4.0,
+    z: 2.0,
+};
 
 fn print_matrix(m: [[f32; 4]; 4]) {
     for i in 0..4 {
@@ -196,7 +200,11 @@ where
     let transform_matrix = mesh.scale_and_center();
 
     // View matrix (convert to positions relative to camera)
-    let view_matrix = cgmath::Matrix4::look_at_rh(CAM_POSITION, cgmath::Point3::origin(), cgmath::Vector3::unit_z());
+    let view_matrix = cgmath::Matrix4::look_at_rh(
+        CAM_POSITION,
+        cgmath::Point3::origin(),
+        cgmath::Vector3::unit_z(),
+    );
     debug!("View:");
     print_matrix(view_matrix.into());
 
@@ -230,12 +238,19 @@ where
 
     // Create FXAA system
     let fxaa = fxaa::FxaaSystem::new(display);
-    let fxaa_enable = matches!(config.aamethod,AAMethod::FXAA);
+    let fxaa_enable = matches!(config.aamethod, AAMethod::FXAA);
 
     fxaa::draw(&fxaa, framebuffer, fxaa_enable, |target| {
         // Fills background color and clears depth buffer
         target.clear_color_and_depth(config.background, 1.0);
-        target.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
+        target
+            .draw(
+                (&vertex_buf, &normal_buf),
+                &indices,
+                &program,
+                &uniforms,
+                &params,
+            )
             .unwrap();
         // TODO: Shadows
     });

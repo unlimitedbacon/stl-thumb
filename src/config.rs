@@ -160,12 +160,10 @@ impl Config {
             .value_of("background")
             .map(|x| c.background = html_to_rgba(x));
         match matches.value_of("aamethod") {
-            Some(x) => {
-                match x {
-                    "none" => c.aamethod = AAMethod::None,
-                    "fxaa" => c.aamethod = AAMethod::FXAA,
-                    _ => unreachable!(),
-                }
+            Some(x) => match x {
+                "none" => c.aamethod = AAMethod::None,
+                "fxaa" => c.aamethod = AAMethod::FXAA,
+                _ => unreachable!(),
             },
             _ => (),
         };
