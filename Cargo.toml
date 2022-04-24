@@ -40,7 +40,7 @@ cbindgen = "0.18.*"
 criterion = "0.2"
 
 [[bench]]
-name = "cube_benchmark"
+name = "benchmarks"
 harness = false
 
 [package.metadata.deb]
