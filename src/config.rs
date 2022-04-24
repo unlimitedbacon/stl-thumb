@@ -12,6 +12,12 @@ pub struct Material {
 }
 
 #[derive(Clone)]
+pub enum AAMethod {
+    None,
+    FXAA,
+}
+
+#[derive(Clone)]
 pub struct Config {
     pub stl_filename: String,
     pub img_filename: Option<String>,
@@ -22,6 +28,7 @@ pub struct Config {
     pub verbosity: usize,
     pub material: Material,
     pub background: (f32, f32, f32, f32),
+    pub aamethod: AAMethod,
 }
 
 impl Default for Config {
@@ -40,6 +47,7 @@ impl Default for Config {
                 specular: [1.00, 1.00, 1.00],
             },
             background: (0.0, 0.0, 0.0, 0.0),
+            aamethod: AAMethod::FXAA,
         }
     }
 }
@@ -103,6 +111,13 @@ impl Config {
                     .takes_value(true)
                     .required(false)
             )
+            .arg(
+                clap::Arg::new("aamethod")
+                    .help("Anti-aliasing method. Default is FXAA, which is fast but may introduce artifacts.")
+                    .short('a')
+                    .long("antialiasing")
+                    .possible_values(["none", "fxaa"]),
+            )
             .get_matches();
 
         let mut c = Config {
@@ -144,6 +159,16 @@ impl Config {
         matches
             .value_of("background")
             .map(|x| c.background = html_to_rgba(x));
+        match matches.value_of("aamethod") {
+            Some(x) => {
+                match x {
+                    "none" => c.aamethod = AAMethod::None,
+                    "fxaa" => c.aamethod = AAMethod::FXAA,
+                    _ => unreachable!(),
+                }
+            },
+            _ => (),
+        };
 
         c
     }

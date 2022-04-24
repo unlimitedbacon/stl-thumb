@@ -11,7 +11,7 @@ pub mod config;
 mod mesh;
 mod fxaa;
 
-use config::Config;
+use config::{Config,AAMethod};
 use libc::c_char;
 use std::error::Error;
 use std::ffi::CStr;
@@ -258,8 +258,9 @@ where
 
     // Create FXAA system
     let fxaa = fxaa::FxaaSystem::new(display);
+    let fxaa_enable = matches!(config.aamethod,AAMethod::FXAA);
 
-    fxaa::draw(&fxaa, framebuffer, true, |target| {
+    fxaa::draw(&fxaa, framebuffer, fxaa_enable, |target| {
         // Fills background color and clears depth buffer
         target.clear_color_and_depth(config.background, 1.0);
         target.draw((&vertex_buf, &normal_buf), &indices, &program, &uniforms, &params)
