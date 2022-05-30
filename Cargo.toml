@@ -9,6 +9,9 @@ license = "MIT"
 homepage = "https://github.com/unlimitedbacon/stl-thumb"
 keywords = ["3d", "3dprinting", "stl"]
 categories = ["command-line-utilities", "Graphics"]
+exclude = [
+    "test_data/*"
+]
 
 [lib]
 name = "stl_thumb"
@@ -18,9 +21,6 @@ crate-type = ["lib", "cdylib", "staticlib"]
 [[bin]]
 name = "stl-thumb"
 path = "src/main.rs"
-
-[badges]
-travis-ci = { repository = "unlimitedbacon/stl-thumb" }
 
 [dependencies]
 cgmath = { version = "0.18.0", features = ["mint"] }
