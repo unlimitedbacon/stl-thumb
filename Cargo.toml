@@ -31,7 +31,7 @@ stderrlog = "0.5.1"
 stl_io = "0.6.0"
 
 [patch.crates-io]
-glutin = { git = 'https://github.com/unlimitedbacon/glutin.git' }
+glutin = { git = "https://github.com/rust-windowing/glutin.git", rev = "07c461e" }
 
 [build-dependencies]
 cbindgen = "0.18.*"

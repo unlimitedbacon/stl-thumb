@@ -731,7 +731,7 @@ dependencies = [
 [[package]]
 name = "glutin"
 version = "0.28.0"
-source = "git+https://github.com/unlimitedbacon/glutin.git#81c71e18178f295c212a1a05a94541e586e8aaeb"
+source = "git+https://github.com/rust-windowing/glutin.git?rev=07c461e#07c461ee4642ba07b1bc01931f3996643d7f1835"
 dependencies = [
  "android_glue",
  "cgl",
@@ -757,7 +757,7 @@ dependencies = [
 [[package]]
 name = "glutin_egl_sys"
 version = "0.1.5"
-source = "git+https://github.com/unlimitedbacon/glutin.git#81c71e18178f295c212a1a05a94541e586e8aaeb"
+source = "git+https://github.com/rust-windowing/glutin.git?rev=07c461e#07c461ee4642ba07b1bc01931f3996643d7f1835"
 dependencies = [
  "gl_generator",
  "winapi",
@@ -766,12 +766,12 @@ dependencies = [
 [[package]]
 name = "glutin_emscripten_sys"
 version = "0.1.1"
-source = "git+https://github.com/unlimitedbacon/glutin.git#81c71e18178f295c212a1a05a94541e586e8aaeb"
+source = "git+https://github.com/rust-windowing/glutin.git?rev=07c461e#07c461ee4642ba07b1bc01931f3996643d7f1835"
 
 [[package]]
 name = "glutin_gles2_sys"
 version = "0.1.5"
-source = "git+https://github.com/unlimitedbacon/glutin.git#81c71e18178f295c212a1a05a94541e586e8aaeb"
+source = "git+https://github.com/rust-windowing/glutin.git?rev=07c461e#07c461ee4642ba07b1bc01931f3996643d7f1835"
 dependencies = [
  "gl_generator",
  "objc",
@@ -780,7 +780,7 @@ dependencies = [
 [[package]]
 name = "glutin_glx_sys"
 version = "0.1.7"
-source = "git+https://github.com/unlimitedbacon/glutin.git#81c71e18178f295c212a1a05a94541e586e8aaeb"
+source = "git+https://github.com/rust-windowing/glutin.git?rev=07c461e#07c461ee4642ba07b1bc01931f3996643d7f1835"
 dependencies = [
  "gl_generator",
  "x11-dl",
@@ -789,7 +789,7 @@ dependencies = [
 [[package]]
 name = "glutin_wgl_sys"
 version = "0.1.5"
-source = "git+https://github.com/unlimitedbacon/glutin.git#81c71e18178f295c212a1a05a94541e586e8aaeb"
+source = "git+https://github.com/rust-windowing/glutin.git?rev=07c461e#07c461ee4642ba07b1bc01931f3996643d7f1835"
 dependencies = [
  "gl_generator",
 ]
