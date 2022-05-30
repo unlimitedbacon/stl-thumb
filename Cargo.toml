@@ -34,13 +34,21 @@ stl_io = "0.6.0"
 glutin = { git = "https://github.com/rust-windowing/glutin.git", rev = "07c461e" }
 
 [build-dependencies]
-cbindgen = "0.18.*"
+cbindgen = "0.23.*"
 
 [dev-dependencies]
-criterion = "0.2"
+criterion = "0.3"
 
 [[bench]]
-name = "benchmarks"
+name = "cube"
+harness = false
+
+[[bench]]
+name = "benchy"
+harness = false
+
+[[bench]]
+name = "shipwreck"
 harness = false
 
 [package.metadata.deb]
