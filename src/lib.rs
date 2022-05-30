@@ -17,6 +17,7 @@ use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::{glutin, CapabilitiesSource, Surface};
+use image::{ImageOutputFormat, ImageEncoder};
 use libc::c_char;
 use mesh::Mesh;
 use std::error::Error;
@@ -388,8 +389,27 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
     let mut buff: Vec<u8> = Vec::new();
     let mut cursor = io::Cursor::new(&mut buff);
 
-    // Encode image with format
-    img.write_to(&mut cursor, config.format.to_owned())?;
+    // Encode image with specified format
+    // If encoding a PNG image, use fastest compression method
+    // Not sure if this is really necessary. Fast is the default anyways.
+    match config.format {
+        ImageOutputFormat::Png => {
+            let encoder = image::codecs::png::PngEncoder::new_with_quality(
+                &mut cursor,
+                image::codecs::png::CompressionType::Fast,
+                //image::codecs::png::CompressionType::Default,
+                image::codecs::png::FilterType::Adaptive
+            );
+            encoder.write_image(
+                img.as_bytes(),
+                config.width,
+                config.height,
+                img.color(),
+            )?;
+        },
+        _ => img.write_to(&mut cursor, config.format.to_owned())?,
+    }
+    //img.write_to(&mut cursor, config.format.to_owned())?;
 
     output.write_all(&buff)?;
     output.flush()?;
