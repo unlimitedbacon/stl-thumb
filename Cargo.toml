@@ -8,7 +8,7 @@ repository = "https://github.com/unlimitedbacon/stl-thumb"
 license = "MIT"
 homepage = "https://github.com/unlimitedbacon/stl-thumb"
 keywords = ["3d", "3dprinting", "stl"]
-categories = ["command-line-utilities", "Graphics"]
+categories = ["command-line-utilities", "graphics"]
 exclude = [
     "test_data/*"
 ]
