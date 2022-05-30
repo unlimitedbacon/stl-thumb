@@ -98,7 +98,7 @@ pub struct Mesh {
 
 impl Mesh {
     // Load mesh data from file (if provided) or stdin
-    pub fn load(stl_filename: &String) -> Result<Mesh, Box<dyn Error>> {
+    pub fn load(stl_filename: &String, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
         // TODO: Add support for URIs instead of plain file names
         // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
         match stl_filename.as_str() {
@@ -107,17 +107,17 @@ impl Mesh {
                 // So I guess this can just consume all RAM if it gets bad input. Hmmm....
                 let mut input_buffer = Vec::new();
                 io::stdin().read_to_end(&mut input_buffer)?;
-                Mesh::from_stl(Cursor::new(input_buffer))
+                Mesh::from_stl(Cursor::new(input_buffer), recalc_normals)
             }
             _ => {
                 // TODO: Try BufReader and see if it's faster
                 let stl_file = File::open(&stl_filename)?;
-                Mesh::from_stl(stl_file)
+                Mesh::from_stl(stl_file, recalc_normals)
             }
         }
     }
 
-    pub fn from_stl<R>(mut stl_file: R) -> Result<Mesh, Box<dyn Error>>
+    pub fn from_stl<R>(mut stl_file: R, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
     where
         R: Read + Seek,
     {
@@ -137,11 +137,11 @@ impl Mesh {
         };
 
         let mut face_count = 0;
-        mesh.process_tri(&t1);
+        mesh.process_tri(&t1, recalc_normals);
         face_count += 1;
 
         for triangle in stl_iter {
-            mesh.process_tri(&triangle?);
+            mesh.process_tri(&triangle?, recalc_normals);
             face_count += 1;
             //debug!("{:?}",triangle);
         }
@@ -157,7 +157,7 @@ impl Mesh {
         Ok(mesh)
     }
 
-    fn process_tri(&mut self, tri: &stl_io::Triangle) {
+    fn process_tri(&mut self, tri: &stl_io::Triangle, recalc_normals: bool) {
         for v in tri.vertices {
             self.bounds.expand(&v);
             self.vertices.push(Vertex { position: v.into() });
@@ -165,7 +165,7 @@ impl Mesh {
         }
         // Use normal from STL file if it is provided, otherwise calculate it ourselves
         let n: Normal;
-        if tri.normal == stl_io::Vector::new([0.0, 0.0, 0.0]) {
+        if recalc_normals || (tri.normal == stl_io::Vector::new([0.0, 0.0, 0.0])) {
             self.stl_had_normals = false;
             n = normal(&tri);
         } else {

@@ -268,7 +268,7 @@ where
 pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
     // Get geometry from STL file
     // ==========================
-    let mesh = Mesh::load(&config.stl_filename)?;
+    let mesh = Mesh::load(&config.stl_filename, config.recalc_normals)?;
 
     // Create GL context
     // =================
@@ -327,7 +327,7 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
 pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
     // Get geometry from STL file
     // =========================
-    let mesh = Mesh::load(&config.stl_filename)?;
+    let mesh = Mesh::load(&config.stl_filename, config.recalc_normals)?;
 
     let img: image::DynamicImage;
 

@@ -29,6 +29,7 @@ pub struct Config {
     pub material: Material,
     pub background: (f32, f32, f32, f32),
     pub aamethod: AAMethod,
+    pub recalc_normals: bool,
 }
 
 impl Default for Config {
@@ -48,6 +49,7 @@ impl Default for Config {
             },
             background: (0.0, 0.0, 0.0, 0.0),
             aamethod: AAMethod::FXAA,
+            recalc_normals: false,
         }
     }
 }
@@ -119,6 +121,11 @@ impl Config {
                     .long("antialiasing")
                     .possible_values(["none", "fxaa"]),
             )
+            .arg(
+                clap::Arg::new("recalc_normals")
+                    .help("Force recalculation of face normals. Use when dealing with malformed STL files.")
+                    .long("recalc-normals")
+            )
             .get_matches();
 
         let mut c = Config {
@@ -163,6 +170,7 @@ impl Config {
             },
             _ => (),
         };
+        c.recalc_normals = matches.is_present("recalc_normals");
 
         c
     }

@@ -65,6 +65,7 @@ $ stl-thumb <STL_FILE> [IMG_FILE]
 | -m, --material \<ambient\> \<diffuse\> \<specular\> | Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue. |
 | -b, --backround \<color> | The background color with transparency (rgba). Default is ffffff00. |
 | -a, --antialiasing [none, fxaa] | Anti-aliasing method. Default is FXAA, which is fast but may introduce artifacts. |
+| --recalc-normals | Force recalculation of face normals. Use when dealing with malformed STL files. |
 | -x            | Display the image in a window instead of saving a file. |
 | -h, --help    | Prints help information.                                |
 | -V, --version | Prints version information.                             |
