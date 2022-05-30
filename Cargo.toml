@@ -6,6 +6,9 @@ description = "A fast lightweight thumbnail generator for STL files"
 readme = "README.md"
 repository = "https://github.com/unlimitedbacon/stl-thumb"
 license = "MIT"
+homepage = "https://github.com/unlimitedbacon/stl-thumb"
+keywords = ["3d", "3dprinting", "stl"]
+categories = ["command-line-utilities", "Graphics"]
 
 [lib]
 name = "stl_thumb"
