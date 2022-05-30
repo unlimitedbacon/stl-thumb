@@ -26,10 +26,7 @@ fn main() {
         .unwrap();
 
     info!("STL File: {}", config.stl_filename);
-    match config.img_filename {
-        Some(ref name) => info!("Thumbnail File: {}\n", &name),
-        None => info!("Output: stdout\n"),
-    };
+    info!("IMG File: {}", config.img_filename);
 
     if config.visible {
         if let Err(e) = stl_thumb::render_to_window(config) {

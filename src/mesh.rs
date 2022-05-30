@@ -2,8 +2,9 @@ extern crate cgmath;
 extern crate stl_io;
 
 use std::error::Error;
-use std::fmt;
 use std::fs::File;
+use std::io::{Cursor, Read, Seek};
+use std::{fmt, io};
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -14,7 +15,7 @@ pub struct Vertex {
 implement_vertex!(Vertex, position);
 //implement_vertex!(Vertex, position, texcoords);
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Normal {
     normal: [f32; 3],
 }
@@ -96,9 +97,30 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn from_stl(mut stl_file: File) -> Result<Mesh, Box<dyn Error>> {
-        //let stl = stl_io::read_stl(&mut stl_file)?;
-        //debug!("{:?}", stl);
+    // Load mesh data from file (if provided) or stdin
+    pub fn load(stl_filename: &String) -> Result<Mesh, Box<dyn Error>> {
+        // TODO: Add support for URIs instead of plain file names
+        // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
+        match stl_filename.as_str() {
+            "-" => {
+                // create_stl_reader requires Seek, so we must read the entire stream into memory before proceeding.
+                // So I guess this can just consume all RAM if it gets bad input. Hmmm....
+                let mut input_buffer = Vec::new();
+                io::stdin().read_to_end(&mut input_buffer)?;
+                Mesh::from_stl(Cursor::new(input_buffer))
+            }
+            _ => {
+                // TODO: Try BufReader and see if it's faster
+                let stl_file = File::open(&stl_filename)?;
+                Mesh::from_stl(stl_file)
+            }
+        }
+    }
+
+    pub fn from_stl<R>(mut stl_file: R) -> Result<Mesh, Box<dyn Error>>
+    where
+        R: Read + Seek,
+    {
         let mut stl_iter = stl_io::create_stl_reader(&mut stl_file)?;
 
         // Get starting point for finding bounding box

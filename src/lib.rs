@@ -21,7 +21,6 @@ use libc::c_char;
 use mesh::Mesh;
 use std::error::Error;
 use std::ffi::CStr;
-use std::fs::File;
 use std::{io, panic, slice, thread, time};
 
 #[cfg(target_os = "linux")]
@@ -268,9 +267,8 @@ where
 
 pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
     // Get geometry from STL file
-    // =========================
-    let stl_file = File::open(&config.stl_filename)?;
-    let mesh = Mesh::from_stl(stl_file)?;
+    // ==========================
+    let mesh = Mesh::load(&config.stl_filename)?;
 
     // Create GL context
     // =================
@@ -329,10 +327,7 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
 pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
     // Get geometry from STL file
     // =========================
-    // TODO: Add support for URIs instead of plain file names
-    // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
-    let stl_file = File::open(&config.stl_filename)?;
-    let mesh = Mesh::from_stl(stl_file)?;
+    let mesh = Mesh::load(&config.stl_filename)?;
 
     let img: image::DynamicImage;
 
@@ -382,9 +377,9 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
 
     // Choose output
     // Write to stdout if user did not specify a file
-    let mut output: Box<dyn io::Write> = match config.img_filename {
-        Some(ref x) => Box::new(std::fs::File::create(&x).unwrap()),
-        None => Box::new(io::stdout()),
+    let mut output: Box<dyn io::Write> = match config.img_filename.as_str() {
+        "-" => Box::new(io::stdout()),
+        _ => Box::new(std::fs::File::create(&config.img_filename).unwrap()),
     };
 
     // write_to() requires a seekable writer for performance reasons.
@@ -503,7 +498,7 @@ mod tests {
         let img_filename = "cube.png".to_string();
         let config = Config {
             stl_filename: "test_data/cube.stl".to_string(),
-            img_filename: Some(img_filename.clone()),
+            img_filename: img_filename.clone(),
             format: image::ImageOutputFormat::Png,
             ..Default::default()
         };

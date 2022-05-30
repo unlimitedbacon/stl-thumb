@@ -20,7 +20,7 @@ pub enum AAMethod {
 #[derive(Clone)]
 pub struct Config {
     pub stl_filename: String,
-    pub img_filename: Option<String>,
+    pub img_filename: String,
     pub format: ImageOutputFormat,
     pub width: u32,
     pub height: u32,
@@ -35,7 +35,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             stl_filename: "".to_string(),
-            img_filename: None,
+            img_filename: "".to_string(),
             format: ImageOutputFormat::Png,
             width: 1024,
             height: 768,
@@ -60,13 +60,14 @@ impl Config {
             .author(env!("CARGO_PKG_AUTHORS"))
             .arg(
                 clap::Arg::new("STL_FILE")
-                    .help("STL file")
+                    .help("STL file. Use - to read from stdin instead of a file.")
                     .required(true)
                     .index(1),
             )
             .arg(
                 clap::Arg::new("IMG_FILE")
-                    .help("Thumbnail image file. If this is omitted, the image data will be dumped to stdout.")
+                    .help("Thumbnail image file. Use - to write to stdout instead of a file.")
+                    .required(true)
                     .index(2),
             )
             .arg(
@@ -125,16 +126,11 @@ impl Config {
         };
 
         c.stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
-        matches
-            .value_of("IMG_FILE")
-            .map(|x| c.img_filename = Some(x.to_string()));
+        c.img_filename = matches.value_of("IMG_FILE").unwrap().to_string();
         match matches.value_of("format") {
             Some(x) => c.format = match_format(x),
-            None => match &c.img_filename {
-                Some(x) => match Path::new(x).extension() {
-                    Some(ext) => c.format = match_format(ext.to_str().unwrap()),
-                    _ => (),
-                },
+            None => match Path::new(&c.img_filename).extension() {
+                Some(ext) => c.format = match_format(ext.to_str().unwrap()),
                 _ => (),
             },
         };
