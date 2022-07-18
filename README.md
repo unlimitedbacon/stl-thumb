@@ -41,15 +41,26 @@ $ sudo apt install ./stl-thumb_0.4.0_amd64.deb
 
 ## Building
 
-Building the tool itself:
+### Building the tool itself:
+You can build the debug version with:
 ```
 $ cargo build
 ```
-Building the .deb-package:
+When your done, build the realease version with:
+```
+$ cargo build --release
+```
+### Building the .deb-package:
 ```
 $ cargo install cargo-deb #this is an additional dependency
 $ cargo deb
 ```
+### Building the .rpm-package:
+```
+$ cargo install cargo-rpm #this is an additional dependency
+$ cargo rpm build
+```
+
 ## Command Line Usage
 
 ```
