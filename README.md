@@ -39,6 +39,16 @@ $ yay -S stl-thumb
 $ sudo apt install ./stl-thumb_0.4.0_amd64.deb
 ```
 
+#### openSUSE
+
+For openSUSE Tumblweed there is a user repo available:
+
+```
+$ sudo zypper ar -f obs://home:jubalh:stl stl
+$ sudo zypper ref
+$ sudo zypper install stl-thumb
+```
+
 ## Building
 
 ### Building the tool itself:
