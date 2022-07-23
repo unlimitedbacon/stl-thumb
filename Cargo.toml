@@ -23,6 +23,7 @@ name = "stl-thumb"
 path = "src/main.rs"
 
 [dependencies]
+ahash = "0.7.6"
 cgmath = { version = "0.18.0", features = ["mint"] }
 clap = "3.1.18"
 glium = "0.31.0"
@@ -32,6 +33,7 @@ log = "0.4.17"
 mint = "0.5.9"
 stderrlog = "0.5.1"
 stl_io = "0.6.0"
+tobj = "3.2.3"
 
 [patch.crates-io]
 glutin = { git = "https://github.com/rust-windowing/glutin.git", rev = "07c461e" }

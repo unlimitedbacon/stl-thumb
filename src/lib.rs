@@ -17,7 +17,7 @@ use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::{glutin, CapabilitiesSource, Surface};
-use image::{ImageOutputFormat, ImageEncoder};
+use image::{ImageEncoder, ImageOutputFormat};
 use libc::c_char;
 use mesh::Mesh;
 use std::error::Error;
@@ -328,7 +328,14 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
 pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
     // Get geometry from STL file
     // =========================
-    let mesh = Mesh::load(&config.stl_filename, config.recalc_normals)?;
+    // TODO: Add support for URIs instead of plain file names
+    // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
+    let stl_file = File::open(&config.stl_filename)?;
+    let mesh = if config.stl_filename.ends_with(".obj") {
+        Mesh::from_obj(stl_file, config.recalc_normals)?
+    } else {
+        Mesh::from_stl(stl_file, config.recalc_normals)?
+    };
 
     let img: image::DynamicImage;
 
@@ -398,15 +405,10 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
                 &mut cursor,
                 image::codecs::png::CompressionType::Fast,
                 //image::codecs::png::CompressionType::Default,
-                image::codecs::png::FilterType::Adaptive
+                image::codecs::png::FilterType::Adaptive,
             );
-            encoder.write_image(
-                img.as_bytes(),
-                config.width,
-                config.height,
-                img.color(),
-            )?;
-        },
+            encoder.write_image(img.as_bytes(), config.width, config.height, img.color())?;
+        }
         _ => img.write_to(&mut cursor, config.format.to_owned())?,
     }
     //img.write_to(&mut cursor, config.format.to_owned())?;

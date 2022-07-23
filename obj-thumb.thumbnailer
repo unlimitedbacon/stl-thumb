@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=stl-thumb
+Exec=stl-thumb -f png -s %s %i %o
+MimeType=model/obj;
