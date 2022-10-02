@@ -82,7 +82,7 @@ fn create_normal_display(
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
     use glium::glutin::platform::windows::EventLoopBuilderExtWindows;
 
-    let event_loop: EventLoop<()> = EventLoop::new_any_thread();
+    let event_loop: EventLoop<()> = EventLoopBuilder::new().with_any_thread(true).build();
     let size = PhysicalSize::new(config.width, config.height);
     let cb = glutin::ContextBuilder::new();
     let context = cb.build_headless(&event_loop, size)?;
