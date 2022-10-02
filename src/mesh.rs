@@ -1,10 +1,18 @@
+extern crate ahash;
 extern crate cgmath;
 extern crate stl_io;
+extern crate tobj;
 
 use std::error::Error;
 use std::fs::File;
+use std::io::BufReader;
 use std::io::{Cursor, Read, Seek};
 use std::{fmt, io};
+
+use self::stl_io::{Triangle, Vector};
+
+use self::ahash::AHashMap;
+use self::tobj::LoadOptions;
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -112,7 +120,12 @@ impl Mesh {
             _ => {
                 // TODO: Try BufReader and see if it's faster
                 let stl_file = File::open(&stl_filename)?;
-                Mesh::from_stl(stl_file, recalc_normals)
+                let mesh = if stl_filename.ends_with(".obj") {
+                    Mesh::from_obj(stl_file, recalc_normals)?
+                } else {
+                    Mesh::from_stl(stl_file, recalc_normals)?
+                };
+                Ok(mesh)
             }
         }
     }
@@ -121,6 +134,8 @@ impl Mesh {
     where
         R: Read + Seek,
     {
+        //let stl = stl_io::read_stl(&mut stl_file)?;
+        //debug!("{:?}", stl);
         let mut stl_iter = stl_io::create_stl_reader(&mut stl_file)?;
 
         // Get starting point for finding bounding box
@@ -157,6 +172,78 @@ impl Mesh {
         Ok(mesh)
     }
 
+    pub fn from_obj(obj_file: File, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
+        let mut input = BufReader::new(obj_file);
+        let (models, _) = tobj::load_obj_buf(
+            &mut input,
+            &LoadOptions {
+                single_index: true,
+                ..LoadOptions::default()
+            },
+            |_| Ok((Vec::new(), AHashMap::new())),
+        )?;
+        let first_mesh = &models.first().ok_or("Empty Model")?.mesh;
+        let mut first_vertex = first_mesh.positions.iter();
+        let mut mesh = Mesh {
+            vertices: Vec::with_capacity(first_mesh.positions.len() / 3),
+            normals: Vec::with_capacity(first_mesh.normals.len() / 3),
+            indices: Vec::with_capacity(first_mesh.indices.len() / 3),
+            bounds: BoundingBox::new(&Vector::new([
+                *first_vertex.next().ok_or("Empty Mesh")?,
+                *first_vertex.next().ok_or("Empty Mesh")?,
+                *first_vertex.next().ok_or("Empty Mesh")?,
+            ])),
+            stl_had_normals: true,
+        };
+        for model in &models {
+            let tri_idx = &model.mesh.indices;
+            let p = &model.mesh.positions;
+            let n = &model.mesh.normals;
+            for i in (0..tri_idx.len()).step_by(3) {
+                let index0: usize = tri_idx[i] as usize;
+                let index1: usize = tri_idx[i + 1] as usize;
+                let index2: usize = tri_idx[i + 2] as usize;
+
+                let vertices = [
+                    Vector::new([p[index0 * 3], p[index0 * 3 + 1], p[index0 * 3 + 2]]),
+                    Vector::new([p[index1 * 3], p[index1 * 3 + 1], p[index1 * 3 + 2]]),
+                    Vector::new([p[index2 * 3], p[index2 * 3 + 1], p[index2 * 3 + 2]]),
+                ];
+                for v in vertices.iter() {
+                    mesh.bounds.expand(v);
+                    mesh.vertices.push(Vertex {
+                        position: (*v).into(),
+                    });
+                    //debug!("{:?}", v);
+                }
+
+                let normals = if !n.is_empty() {
+                    [
+                        Normal {
+                            normal: ([n[index0 * 3], n[index0 * 3 + 1], n[index0 * 3 + 2]]),
+                        },
+                        Normal {
+                            normal: ([n[index1 * 3], n[index1 * 3 + 1], n[index1 * 3 + 2]]),
+                        },
+                        Normal {
+                            normal: ([n[index2 * 3], n[index2 * 3 + 1], n[index2 * 3 + 2]]),
+                        },
+                    ]
+                } else {
+                    let n = normal(&Triangle {
+                        vertices,
+                        normal: Vector::new([0.0, 0.0, 0.0]),
+                    });
+                    [n, n, n]
+                };
+                for normal in normals.iter() {
+                    mesh.normals.push(*normal);
+                }
+            }
+        }
+        Ok(mesh)
+    }
+
     fn process_tri(&mut self, tri: &stl_io::Triangle, recalc_normals: bool) {
         for v in tri.vertices {
             self.bounds.expand(&v);
@@ -167,7 +254,7 @@ impl Mesh {
         let n: Normal;
         if recalc_normals || (tri.normal == stl_io::Vector::new([0.0, 0.0, 0.0])) {
             self.stl_had_normals = false;
-            n = normal(&tri);
+            n = normal(tri);
         } else {
             n = Normal {
                 normal: tri.normal.into(),
