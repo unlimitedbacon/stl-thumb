@@ -15,9 +15,9 @@ use cgmath::EuclideanSpace;
 use config::{AAMethod, Config};
 use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
-use glium::glutin::event_loop::{ControlFlow, EventLoop};
+use glium::glutin::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
 use glium::{glutin, CapabilitiesSource, Surface};
-use image::{ImageOutputFormat, ImageEncoder};
+use image::{ImageEncoder, ImageOutputFormat};
 use libc::c_char;
 use mesh::Mesh;
 use std::error::Error;
@@ -25,12 +25,7 @@ use std::ffi::CStr;
 use std::{io, panic, slice, thread, time};
 
 #[cfg(target_os = "linux")]
-use glium::glutin::platform::unix::{EventLoopExtUnix, HeadlessContextExt};
-#[cfg(target_os = "linux")]
 use std::env;
-
-#[cfg(target_os = "windows")]
-use glium::glutin::platform::windows::EventLoopExtWindows;
 
 // TODO: Move this stuff to config module
 const CAM_FOV_DEG: f32 = 30.0;
@@ -83,8 +78,10 @@ fn create_normal_display(
     Ok((display, event_loop))
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(target_os = "windows")]
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
+    use glium::glutin::platform::windows::EventLoopBuilderExtWindows;
+
     let event_loop: EventLoop<()> = EventLoop::new_any_thread();
     let size = PhysicalSize::new(config.width, config.height);
     let cb = glutin::ContextBuilder::new();
@@ -98,6 +95,8 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
 
 #[cfg(target_os = "linux")]
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
+    use glium::glutin::platform::unix::{EventLoopBuilderExtUnix, HeadlessContextExt};
+
     let size = PhysicalSize::new(config.width, config.height);
     let cb = glutin::ContextBuilder::new();
     let context: glium::glutin::Context<glium::glutin::NotCurrent>;
@@ -108,7 +107,7 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
     // If this happens we catch the panic and fall back to osmesa software rendering, which doesn't require an event loop.
     // TODO: Submit PR upstream to stop panicing
     let event_loop_result: Result<EventLoop<()>, _> =
-        panic::catch_unwind(|| EventLoop::new_any_thread());
+        panic::catch_unwind(|| EventLoopBuilder::new().with_any_thread(true).build());
 
     match event_loop_result {
         Ok(event_loop) => {
@@ -399,15 +398,10 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
                 &mut cursor,
                 image::codecs::png::CompressionType::Fast,
                 //image::codecs::png::CompressionType::Default,
-                image::codecs::png::FilterType::Adaptive
+                image::codecs::png::FilterType::Adaptive,
             );
-            encoder.write_image(
-                img.as_bytes(),
-                config.width,
-                config.height,
-                img.color(),
-            )?;
-        },
+            encoder.write_image(img.as_bytes(), config.width, config.height, img.color())?;
+        }
         _ => img.write_to(&mut cursor, config.format.to_owned())?,
     }
     //img.write_to(&mut cursor, config.format.to_owned())?;

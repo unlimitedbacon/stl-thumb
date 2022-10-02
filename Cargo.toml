@@ -26,7 +26,7 @@ path = "src/main.rs"
 ahash = "0.7.6"
 cgmath = { version = "0.18.0", features = ["mint"] }
 clap = "3.1.18"
-glium = "0.31.0"
+glium = "0.32.1"
 image = "0.24.2"
 libc = "0.2"
 log = "0.4.17"
@@ -35,8 +35,8 @@ stderrlog = "0.5.1"
 stl_io = "0.6.0"
 tobj = "3.2.3"
 
-[patch.crates-io]
-glutin = { git = "https://github.com/rust-windowing/glutin.git", rev = "07c461e" }
+#[patch.crates-io]
+#glutin = { git = "https://github.com/rust-windowing/glutin.git", rev = "07c461e" }
 
 [build-dependencies]
 cbindgen = "0.23.*"
