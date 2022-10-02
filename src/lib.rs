@@ -106,6 +106,7 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
 
     // If there is no X server or Wayland, creating the event loop will fail first.
     // If this happens we catch the panic and fall back to osmesa software rendering, which doesn't require an event loop.
+    // TODO: Submit PR upstream to stop panicing
     let event_loop_result: Result<EventLoop<()>, _> =
         panic::catch_unwind(|| EventLoop::new_any_thread());
 
@@ -514,10 +515,35 @@ mod tests {
     use std::io::ErrorKind;
 
     #[test]
-    fn cube() {
-        let img_filename = "cube.png".to_string();
+    fn cube_stl() {
+        let img_filename = "cube-stl.png".to_string();
         let config = Config {
             stl_filename: "test_data/cube.stl".to_string(),
+            img_filename: img_filename.clone(),
+            format: image::ImageOutputFormat::Png,
+            ..Default::default()
+        };
+
+        match fs::remove_file(&img_filename) {
+            Ok(_) => (),
+            Err(ref error) if error.kind() == ErrorKind::NotFound => (),
+            Err(_) => {
+                panic!("Couldn't clean files before testing");
+            }
+        }
+
+        render_to_file(&config).expect("Error in render function");
+
+        let size = fs::metadata(img_filename).expect("No file created").len();
+
+        assert_ne!(0, size);
+    }
+
+    #[test]
+    fn cube_obj() {
+        let img_filename = "cube-obj.png".to_string();
+        let config = Config {
+            stl_filename: "test_data/cube.obj".to_string(),
             img_filename: img_filename.clone(),
             format: image::ImageOutputFormat::Png,
             ..Default::default()
