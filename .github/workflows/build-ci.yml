@@ -61,10 +61,10 @@ jobs:
         sudo apt-get install gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf g++-aarch64-linux-gnu libc-dev-armhf-cross libc-dev-arm64-cross libfreetype6-dev:arm64 libfreetype6-dev:armhf libfontconfig-dev:arm64 libfontconfig-dev:armhf
     - name: Prep build environment
       run: |
-        if [[ ${{ matrix.target }} == "armv7-unknown-linux-gnueabihf"]]
+        if [ ${{ matrix.target }} == "armv7-unknown-linux-gnueabihf" ];
         then
           export PKG_CONFIG_SYSROOT_DIR=/usr/arm-linux-gnueabihf
-        elif [[ ${{ matrix.target }} == "aarch64-unknown-linux-gnu"]]
+        elif [ ${{ matrix.target }} == "aarch64-unknown-linux-gnu" ];
         then
           export PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu
         fi
