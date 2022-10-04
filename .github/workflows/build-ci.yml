@@ -54,11 +54,10 @@ jobs:
     - name: Install packages
       # This is all BS to get random dependencies to cross compile and I hate it
       run: |
-        echo "deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports bionic main restricted" | sudo tee -a /etc/apt/sources.list
-        echo "deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports bionic-updates main restricted" | sudo tee -a /etc/apt/sources.list
+        sudo cp .github/workflows/sources.list /etc/apt/sources.list
         sudo dpkg --add-architecture arm64
         sudo dpkg --add-architecture armhf
-        sudo apt-get update || true
+        sudo apt-get update
         sudo apt-get install gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf g++-aarch64-linux-gnu libc-dev-armhf-cross libc-dev-arm64-cross libfreetype-dev:arm64 libfreetype-dev:armhf libfontconfig-dev:arm64 libfontconfig-dev:armhf
     - name: Prep build environment
       run: |
