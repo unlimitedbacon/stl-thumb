@@ -52,11 +52,23 @@ jobs:
           target/
         key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install packages
+      # This is all BS to get random dependencies to cross compile and I hate it
       run: |
+        echo "deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports bionic main restricted" | sudo tee -a /etc/apt/sources.list
+        echo "deb [arch=arm64,armhf] http://ports.ubuntu.com/ubuntu-ports bionic-updates main restricted" | sudo tee -a /etc/apt/sources.list
+        sudo dpkg --add-architecture arm64
+        sudo dpkg --add-architecture armhf
         sudo apt-get update
-        sudo apt-get install gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu libc-dev-armhf-cross libc-dev-arm64-cross
+        sudo apt-get install gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf g++-aarch64-linux-gnu libc-dev-armhf-cross libc-dev-arm64-cross libfreetype-dev:arm64 libfreetype-dev:armhf libfontconfig-dev:arm64 libfontconfig-dev:armhf
     - name: Prep build environment
       run: |
+        if [[ ${{ matrix.target }} == "armv7-unknown-linux-gnueabihf"]]
+        then
+          export PKG_CONFIG_SYSROOT_DIR=/usr/arm-linux-gnueabihf
+        elif [[ ${{ matrix.target }} == "aarch64-unknown-linux-gnu"]]
+        then
+          export PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu
+        fi
         rustup target add ${{ matrix.target }}
         cargo install cargo-deb --force
     - name: Package
