@@ -52,6 +52,8 @@ $ sudo zypper install stl-thumb
 ## Building
 
 ### Building the tool itself:
+If you get errors about fontconfig being missing, install the development package
+
 You can build the debug version with:
 ```
 $ cargo build
@@ -67,8 +69,8 @@ $ cargo deb
 ```
 ### Building the .rpm-package:
 ```
-$ cargo install cargo-rpm #this is an additional dependency
-$ cargo rpm build
+$ cargo install generate-rpm #this is an additional dependency
+$ cargo generate-rpm
 ```
 
 ## Command Line Usage

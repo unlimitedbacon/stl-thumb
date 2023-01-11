@@ -75,18 +75,13 @@ assets = [
     ["README.md",                       "usr/share/doc/stl-thumb/", "644"],
 ]
 
-[package.metadata.rpm]
-package = "stl-thumb"
-
-[package.metadata.rpm.cargo]
-buildflags = ["--release"]
-
-[package.metadata.rpm.targets]
-stl-thumb = { path = "/usr/bin/stl-thumb" }
-"libstl_thumb.so" = { path = "/usr/lib64/libstl_thumb.so" }
-"libstl_thumb.a" = { path = "/usr/lib64/libstl_thumb.a", mode = "644" }
-"../../libstl_thumb.h" = { path = "/usr/include/libstl_thumb.h", mode = "644"}
-"../../stl-thumb.thumbnailer" = { path = "/usr/share/thumbnailers/stl-thumb.thumbnailer", mode = "644"}
-"../../stl-thumb-mime.xml" = { path = "/usr/share/mime/packages/stl-thumb-mime.xml", mode = "644"}
-"../../README.md" = { path = "/usr/share/doc/stl-thumb/README.md", mode = "644"}
-
+[package.metadata.generate-rpm]
+assets = [
+    { source = "./target/release/stl-thumb",        dest = "/usr/bin/stl-thumb",                                mode = "755" },
+    { source = "./target/release/libstl_thumb.so",  dest = "/usr/lib64/libstl_thumb.so",                        mode = "755" },
+    { source = "./target/release/libstl_thumb.a",   dest = "/usr/lib64/libstl_thumb.a",                         mode = "644" },
+    { source = "libstl_thumb.h",                    dest = "/usr/include/libstl_thumb.h",                       mode = "644" },
+    { source = "stl-thumb.thumbnailer",             dest = "/usr/share/thumbnailers/stl-thumb.thumbnailer",     mode = "644" },
+    { source = "stl-thumb-mime.xml",                dest = "/usr/share/mime/packages/stl-thumb-mime.xml",       mode = "644" },
+    { source = "README.md",                         dest = "/usr/share/doc/stl-thumb/README.md",    doc = true, mode = "644" }
+]
