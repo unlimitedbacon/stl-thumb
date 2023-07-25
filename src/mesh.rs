@@ -178,6 +178,7 @@ impl Mesh {
             &mut input,
             &LoadOptions {
                 single_index: true,
+                triangulate: true,
                 ..LoadOptions::default()
             },
             |_| Ok((Vec::new(), AHashMap::new())),
