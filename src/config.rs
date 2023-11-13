@@ -43,9 +43,9 @@ impl Default for Config {
             visible: false,
             verbosity: 0,
             material: Material {
-                ambient: [0.00, 0.13, 0.26],
-                diffuse: [0.38, 0.63, 1.00],
-                specular: [1.00, 1.00, 1.00],
+                ambient: [0.1552, 0.0086, 0.0266],
+                diffuse: [0.5432, 0.0301, 0.0931],
+                specular: [1.0, 1.0, 1.0],
             },
             background: (0.0, 0.0, 0.0, 0.0),
             aamethod: AAMethod::FXAA,
