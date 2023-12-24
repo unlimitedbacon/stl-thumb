@@ -5,6 +5,7 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,7 +13,7 @@ env:
 jobs:
   build:
     name: Build and Test
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - uses: actions/cache@v3
@@ -29,14 +30,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install libosmesa6-dev
     - name: Build
-      run: cargo build --verbose
+      run: |
+        cargo build --release --verbose
+        strip -s target/release/stl-thumb
     - name: Run tests
       run: RUST_BACKTRACE=1 cargo test --verbose
 
   package:
     needs: [build]
     name: Package
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         target: [x86_64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, aarch64-unknown-linux-gnu]
@@ -70,9 +73,17 @@ jobs:
         fi
         rustup target add ${{ matrix.target }}
         cargo install cargo-deb --force
-    - name: Package
-      run: cargo deb --target ${{ matrix.target }}
+        cargo install cargo-generate-rpm --force
+    - name: Package DEB
+      run: |
+        cargo deb --target ${{ matrix.target }}
+    - name: Package RPM
+      run: |
+        cp -r ./target/${{ matrix.target }}/release ./target
+        cargo generate-rpm --target ${{ matrix.target }}
     - uses: actions/upload-artifact@v3
       with:
-        name: deb-${{ matrix.target }}
-        path: target/${{ matrix.target }}/debian/*.deb
+        name: deb-rpm-${{ matrix.target }}
+        path: |
+          target/${{ matrix.target }}/debian/*.deb
+          target/${{ matrix.target }}/generate-rpm/*.rpm
