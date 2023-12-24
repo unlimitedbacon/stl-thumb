@@ -79,8 +79,7 @@ jobs:
         cargo deb --target ${{ matrix.target }}
     - name: Package RPM
       run: |
-        cp -r ./target/${{ matrix.target }}/release ./target
-        cargo generate-rpm --target ${{ matrix.target }}
+        cargo generate-rpm --target-dir ./target --target ${{ matrix.target }}
     - uses: actions/upload-artifact@v3
       with:
         name: deb-rpm-${{ matrix.target }}
