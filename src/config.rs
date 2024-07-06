@@ -1,6 +1,4 @@
-extern crate clap;
-
-use image::ImageOutputFormat;
+use image::ImageFormat;
 use std::f32;
 use std::path::Path;
 
@@ -21,7 +19,7 @@ pub enum AAMethod {
 pub struct Config {
     pub stl_filename: String,
     pub img_filename: String,
-    pub format: ImageOutputFormat,
+    pub format: ImageFormat,
     pub width: u32,
     pub height: u32,
     pub visible: bool,
@@ -37,7 +35,7 @@ impl Default for Config {
         Config {
             stl_filename: "".to_string(),
             img_filename: "".to_string(),
-            format: ImageOutputFormat::Png,
+            format: ImageFormat::Png,
             width: 1024,
             height: 768,
             visible: false,
@@ -57,7 +55,7 @@ impl Default for Config {
 impl Config {
     pub fn new() -> Config {
         // Define command line arguments
-        let matches = clap::Command::new(env!("CARGO_PKG_NAME"))
+        let mut matches = clap::Command::new(env!("CARGO_PKG_NAME"))
             .version(env!("CARGO_PKG_VERSION"))
             .author(env!("CARGO_PKG_AUTHORS"))
             .arg(
@@ -77,14 +75,14 @@ impl Config {
                     .help("The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP")
                     .short('f')
                     .long("format")
-                    .takes_value(true)
+                    .action(clap::ArgAction::Set)
             )
             .arg(
                 clap::Arg::new("size")
                     .help("Size of thumbnail (square)")
                     .short('s')
                     .long("size")
-                    .takes_value(true)
+                    .action(clap::ArgAction::Set)
                     .required(false)
             )
             .arg(
@@ -96,7 +94,7 @@ impl Config {
             .arg(
                 clap::Arg::new("verbosity")
                     .short('v')
-                    .multiple_occurrences(true)
+                    .action(clap::ArgAction::Count)
                     .help("Increase message verbosity")
             )
             .arg(
@@ -111,7 +109,7 @@ impl Config {
                     .help("The background color with transparency (rgba). Default is ffffff00.")
                     .short('b')
                     .long("background")
-                    .takes_value(true)
+                    .action(clap::ArgAction::Set)
                     .required(false)
             )
             .arg(
@@ -119,7 +117,7 @@ impl Config {
                     .help("Anti-aliasing method. Default is FXAA, which is fast but may introduce artifacts.")
                     .short('a')
                     .long("antialiasing")
-                    .possible_values(["none", "fxaa"]),
+                    .value_parser(["none", "fxaa"]),
             )
             .arg(
                 clap::Arg::new("recalc_normals")
@@ -132,9 +130,13 @@ impl Config {
             ..Default::default()
         };
 
-        c.stl_filename = matches.value_of("STL_FILE").unwrap().to_string();
-        c.img_filename = matches.value_of("IMG_FILE").unwrap().to_string();
-        match matches.value_of("format") {
+        c.stl_filename = matches
+            .remove_one::<String>("STL_FILE")
+            .expect("STL_FILE not provided");
+        c.img_filename = matches
+            .remove_one::<String>("IMG_FILE")
+            .expect("IMG_FILE not provided");
+        match matches.get_one::<String>("format") {
             Some(x) => c.format = match_format(x),
             None => match Path::new(&c.img_filename).extension() {
                 Some(ext) => c.format = match_format(ext.to_str().unwrap()),
@@ -142,54 +144,48 @@ impl Config {
             },
         };
         matches
-            .value_of("size")
+            .get_one::<String>("size")
             .map(|x| c.width = x.parse::<u32>().expect("Invalid size"));
         matches
-            .value_of("size")
+            .get_one::<String>("size")
             .map(|x| c.height = x.parse::<u32>().expect("Invalid size"));
-        c.visible = matches.is_present("visible");
-        c.verbosity = matches.occurrences_of("verbosity") as usize;
-        match matches.values_of("material") {
-            Some(mut x) => {
-                c.material = Material {
-                    ambient: html_to_rgb(x.next().unwrap()),
-                    diffuse: html_to_rgb(x.next().unwrap()),
-                    specular: html_to_rgb(x.next().unwrap()),
-                }
-            }
-            _ => (),
-        };
+        c.visible = matches.contains_id("visible");
+        c.verbosity = matches.get_count("verbosity") as usize;
+        if let Some(materials) = matches.get_many::<String>("material") {
+            let mut iter = materials.map(|m| html_to_rgb(m));
+            c.material = Material {
+                ambient: iter.next().unwrap_or([0.0, 0.0, 0.0]),
+                diffuse: iter.next().unwrap_or([0.0, 0.0, 0.0]),
+                specular: iter.next().unwrap_or([0.0, 0.0, 0.0]),
+            };
+        }
         matches
-            .value_of("background")
+            .get_one::<String>("background")
             .map(|x| c.background = html_to_rgba(x));
-        match matches.value_of("aamethod") {
-            Some(x) => match x {
+        match matches.get_one::<String>("aamethod") {
+            Some(x) => match x.as_str() {
                 "none" => c.aamethod = AAMethod::None,
                 "fxaa" => c.aamethod = AAMethod::FXAA,
                 _ => unreachable!(),
             },
-            _ => (),
+            None => (),
         };
-        c.recalc_normals = matches.is_present("recalc_normals");
+        c.recalc_normals = matches.contains_id("recalc_normals");
 
         c
     }
 }
 
-fn match_format(ext: &str) -> ImageOutputFormat {
-    match ext.to_lowercase().as_ref() {
-        "png" => ImageOutputFormat::Png,
-        "jpeg" => ImageOutputFormat::Jpeg(95),
-        "jpg" => ImageOutputFormat::Jpeg(95),
-        "gif" => ImageOutputFormat::Gif,
-        "ico" => ImageOutputFormat::Ico,
-        "bmp" => ImageOutputFormat::Bmp,
+fn match_format(ext: &str) -> ImageFormat {
+    match ext.to_lowercase().as_str() {
+        "png" => ImageFormat::Png,
+        "jpeg" | "jpg" => ImageFormat::Jpeg,
+        "gif" => ImageFormat::Gif,
+        "ico" => ImageFormat::Ico,
+        "bmp" => ImageFormat::Bmp,
         _ => {
             warn!("Unsupported image format. Using PNG instead.");
-            Config {
-                ..Default::default()
-            }
-            .format
+            ImageFormat::Png
         }
     }
 }

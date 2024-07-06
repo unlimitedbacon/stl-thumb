@@ -12,6 +12,7 @@ categories = ["command-line-utilities", "graphics"]
 exclude = [
     "test_data/*"
 ]
+edition = "2021"
 
 [lib]
 name = "stl_thumb"
@@ -23,27 +24,28 @@ name = "stl-thumb"
 path = "src/main.rs"
 
 [dependencies]
-ahash = "0.7.6"
+ahash = "0.8.11"
 cgmath = { version = "0.18.0", features = ["mint"] }
-clap = "3.1.18"
+clap = "4.5.8"
 glium = "0.32"
-image = "0.24"
+image = "0.25.1"
 libc = "0.2"
 log = "0.4.17"
 mint = "0.5.9"
-stderrlog = "0.5.1"
-stl_io = "0.6.0"
-threemf = { version = "0.6.0" }
-tobj = "3.2.3"
+stderrlog = "0.6.0"
+stl_io = "0.7.0"
+tobj = "4.0.2"
+winit = "0.30.3"
+threemf = "0.6.0"
 
 #[patch.crates-io]
 #glutin = { git = "https://github.com/rust-windowing/glutin.git", rev = "07c461e" }
 
 [build-dependencies]
-cbindgen = "0.23.*"
+cbindgen = "0.26.*"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.5.1"
 
 [[bench]]
 name = "cube"
