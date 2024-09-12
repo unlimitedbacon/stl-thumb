@@ -33,6 +33,7 @@ log = "0.4.17"
 mint = "0.5.9"
 stderrlog = "0.5.1"
 stl_io = "0.6.0"
+threemf = "0.5.0"
 tobj = "3.2.3"
 
 #[patch.crates-io]

@@ -106,10 +106,10 @@ pub struct Mesh {
 
 impl Mesh {
     // Load mesh data from file (if provided) or stdin
-    pub fn load(stl_filename: &String, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
+    pub fn load(stl_filename: &str, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
         // TODO: Add support for URIs instead of plain file names
         // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
-        match stl_filename.as_str() {
+        match stl_filename {
             "-" => {
                 // create_stl_reader requires Seek, so we must read the entire stream into memory before proceeding.
                 // So I guess this can just consume all RAM if it gets bad input. Hmmm....
@@ -118,16 +118,73 @@ impl Mesh {
                 Mesh::from_stl(Cursor::new(input_buffer), recalc_normals)
             }
             _ => {
+                let stl_filename = std::path::Path::new(stl_filename);
                 // TODO: Try BufReader and see if it's faster
-                let stl_file = File::open(&stl_filename)?;
-                let mesh = if stl_filename.ends_with(".obj") {
-                    Mesh::from_obj(stl_file, recalc_normals)?
-                } else {
-                    Mesh::from_stl(stl_file, recalc_normals)?
-                };
-                Ok(mesh)
+                let stl_file = File::open(stl_filename)?;
+                Ok(
+                    match stl_filename
+                        .extension()
+                        .and_then(std::ffi::OsStr::to_str)
+                        .unwrap_or("")
+                    {
+                        "obj" => Mesh::from_obj(stl_file, recalc_normals)?,
+                        "stl" => Mesh::from_stl(stl_file, recalc_normals)?,
+                        "3mf" => Mesh::from_3mf(stl_file, recalc_normals)?,
+                        _ => unimplemented!("Format not supported"),
+                    },
+                )
             }
         }
+    }
+
+    pub fn from_3mf<R>(stl_file: R, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
+    where
+        R: Read + Seek,
+    {
+        let models = threemf::read(stl_file)?;
+
+        let mut result = None;
+
+        let vertex_translator = |vertex: &threemf::model::Vertex| {
+            stl_io::Vertex::new([vertex.x as f32, vertex.y as f32, vertex.z as f32])
+        };
+
+        // Combine all the models into a single mesh.
+        for model in models {
+            for object in model.resources.object {
+                match object.object {
+                    threemf::model::ObjectData::Mesh(mesh) => {
+                        for triangle in &mesh.triangles.triangle {
+                            // Re-use `Mesh::process_tri`, which creates new vertices for every
+                            // triangle.
+                            // Possible optimization: re-use triangles instead.
+                            let triangle = stl_io::Triangle {
+                                normal: stl_io::Normal::new([1f32, 0f32, 0f32]),
+                                vertices: [
+                                    vertex_translator(&mesh.vertices.vertex[triangle.v1]),
+                                    vertex_translator(&mesh.vertices.vertex[triangle.v2]),
+                                    vertex_translator(&mesh.vertices.vertex[triangle.v3]),
+                                ],
+                            };
+                            result
+                                .get_or_insert_with(|| Mesh {
+                                    vertices: Vec::new(),
+                                    normals: Vec::new(),
+                                    indices: Vec::new(),
+                                    bounds: BoundingBox::new(&triangle.vertices[0]),
+                                    stl_had_normals: false,
+                                })
+                                .process_tri(&triangle, true);
+                        }
+                    }
+                    threemf::model::ObjectData::Components { component: _ } => {
+                        // Unimplemented for now
+                    }
+                }
+            }
+        }
+
+        Ok(result.unwrap())
     }
 
     pub fn from_stl<R>(mut stl_file: R, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
