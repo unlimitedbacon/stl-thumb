@@ -152,33 +152,29 @@ impl Mesh {
         // Combine all the models into a single mesh.
         for model in models {
             for object in model.resources.object {
-                match object.object {
-                    threemf::model::ObjectData::Mesh(mesh) => {
-                        for triangle in &mesh.triangles.triangle {
-                            // Re-use `Mesh::process_tri`, which creates new vertices for every
-                            // triangle.
-                            // Possible optimization: re-use triangles instead.
-                            let triangle = stl_io::Triangle {
-                                normal: stl_io::Normal::new([1f32, 0f32, 0f32]),
-                                vertices: [
-                                    vertex_translator(&mesh.vertices.vertex[triangle.v1]),
-                                    vertex_translator(&mesh.vertices.vertex[triangle.v2]),
-                                    vertex_translator(&mesh.vertices.vertex[triangle.v3]),
-                                ],
-                            };
-                            result
-                                .get_or_insert_with(|| Mesh {
-                                    vertices: Vec::new(),
-                                    normals: Vec::new(),
-                                    indices: Vec::new(),
-                                    bounds: BoundingBox::new(&triangle.vertices[0]),
-                                    stl_had_normals: false,
-                                })
-                                .process_tri(&triangle, true);
-                        }
-                    }
-                    threemf::model::ObjectData::Components { component: _ } => {
-                        // Unimplemented for now
+                if let Some(mesh) = object.mesh {
+                    eprintln!("Received a mesh");
+                    for triangle in &mesh.triangles.triangle {
+                        // Re-use `Mesh::process_tri`, which creates new vertices for every
+                        // triangle.
+                        // Possible optimization: re-use triangles instead.
+                        let triangle = stl_io::Triangle {
+                            normal: stl_io::Normal::new([1f32, 0f32, 0f32]),
+                            vertices: [
+                                vertex_translator(&mesh.vertices.vertex[triangle.v1]),
+                                vertex_translator(&mesh.vertices.vertex[triangle.v2]),
+                                vertex_translator(&mesh.vertices.vertex[triangle.v3]),
+                            ],
+                        };
+                        result
+                            .get_or_insert_with(|| Mesh {
+                                vertices: Vec::new(),
+                                normals: Vec::new(),
+                                indices: Vec::new(),
+                                bounds: BoundingBox::new(&triangle.vertices[0]),
+                                stl_had_normals: false,
+                            })
+                            .process_tri(&triangle, true);
                     }
                 }
             }
@@ -229,7 +225,7 @@ impl Mesh {
         Ok(mesh)
     }
 
-    pub fn from_obj(obj_file: File, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
+    pub fn from_obj(obj_file: File, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
         let mut input = BufReader::new(obj_file);
         let (models, _) = tobj::load_obj_buf(
             &mut input,
