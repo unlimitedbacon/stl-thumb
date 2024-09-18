@@ -1883,8 +1883,9 @@ dependencies = [
 
 [[package]]
 name = "threemf"
-version = "0.5.0"
-source = "git+https://github.com/hannobraun/3mf-rs#a99506be163ed2f2af35c9422e14022767151629"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb5fd806deaf82c90e87d9bf7d2a43fc1782bdeadc161bf1f5cd5b0f2096c693"
 dependencies = [
  "quick-xml",
  "serde",
