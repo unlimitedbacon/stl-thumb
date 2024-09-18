@@ -569,7 +569,7 @@ mod tests {
         let config = Config {
             stl_filename: "test_data/cube.3mf".to_string(),
             img_filename: img_filename.clone(),
-            format: image::ImageOutputFormat::Png,
+            format: image::ImageFormat::Png,
             ..Default::default()
         };
 
