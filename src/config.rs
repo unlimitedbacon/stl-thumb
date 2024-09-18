@@ -102,7 +102,7 @@ impl Config {
                     .help("Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue.")
                     .short('m')
                     .long("material")
-                    .value_names(&["ambient","diffuse","specular"])
+                    .value_names(["ambient","diffuse","specular"])
             )
             .arg(
                 clap::Arg::new("background")
@@ -138,17 +138,21 @@ impl Config {
             .expect("IMG_FILE not provided");
         match matches.get_one::<String>("format") {
             Some(x) => c.format = match_format(x),
-            None => match Path::new(&c.img_filename).extension() {
-                Some(ext) => c.format = match_format(ext.to_str().unwrap()),
-                _ => (),
-            },
+            None => {
+                if let Some(ext) = Path::new(&c.img_filename).extension() {
+                    c.format = match_format(ext.to_str().unwrap());
+                }
+            }
         };
-        matches
-            .get_one::<String>("size")
-            .map(|x| c.width = x.parse::<u32>().expect("Invalid size"));
-        matches
-            .get_one::<String>("size")
-            .map(|x| c.height = x.parse::<u32>().expect("Invalid size"));
+
+        if let Some(x) = matches.get_one::<String>("size") {
+            c.width = x.parse::<u32>().expect("Invalid size");
+        }
+
+        if let Some(x) = matches.get_one::<String>("size") {
+            c.height = x.parse::<u32>().expect("Invalid size");
+        }
+
         c.visible = matches.contains_id("visible");
         c.verbosity = matches.get_count("verbosity") as usize;
         if let Some(materials) = matches.get_many::<String>("material") {
@@ -159,17 +163,16 @@ impl Config {
                 specular: iter.next().unwrap_or([0.0, 0.0, 0.0]),
             };
         }
-        matches
-            .get_one::<String>("background")
-            .map(|x| c.background = html_to_rgba(x));
-        match matches.get_one::<String>("aamethod") {
-            Some(x) => match x.as_str() {
+        if let Some(x) = matches.get_one::<String>("background") {
+            c.background = html_to_rgba(x);
+        }
+        if let Some(x) = matches.get_one::<String>("aamethod") {
+            match x.as_str() {
                 "none" => c.aamethod = AAMethod::None,
                 "fxaa" => c.aamethod = AAMethod::FXAA,
                 _ => unreachable!(),
-            },
-            None => (),
-        };
+            }
+        }
         c.recalc_normals = matches.contains_id("recalc_normals");
 
         c

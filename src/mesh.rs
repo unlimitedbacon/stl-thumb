@@ -337,8 +337,7 @@ impl Mesh {
         let scale = 2.0 / longest;
         info!("Scale:\t{}", scale);
         let scale_matrix = cgmath::Matrix4::from_scale(scale);
-        let matrix = scale_matrix * translation_matrix;
-        matrix
+        scale_matrix * translation_matrix
     }
 }
 
