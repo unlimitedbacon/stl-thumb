@@ -33,7 +33,7 @@ libc = "0.2"
 log = "0.4.17"
 mint = "0.5.9"
 stderrlog = "0.6.0"
-stl_io = "0.7.0"
+stl_io = "0.8.0"
 tobj = "4.0.2"
 winit = "0.30.3"
 threemf = "0.6.0"
@@ -42,7 +42,7 @@ threemf = "0.6.0"
 #glutin = { git = "https://github.com/rust-windowing/glutin.git", rev = "07c461e" }
 
 [build-dependencies]
-cbindgen = "0.26.*"
+cbindgen = "0.27.*"
 
 [dev-dependencies]
 criterion = "0.5.1"
