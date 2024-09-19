@@ -33,11 +33,9 @@ fn main() {
             error!("Application error: {}", e);
             process::exit(1);
         }
-    } else {
-        if let Err(e) = stl_thumb::render_to_file(&config) {
-            error!("Application error: {}", e);
-            process::exit(1);
-        }
+    } else if let Err(e) = stl_thumb::render_to_file(&config) {
+        error!("Application error: {}", e);
+        process::exit(1);
     }
 }
 

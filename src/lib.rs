@@ -36,11 +36,8 @@ const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {
 };
 
 fn print_matrix(m: [[f32; 4]; 4]) {
-    for i in 0..4 {
-        debug!(
-            "{:.3}\t{:.3}\t{:.3}\t{:.3}",
-            m[i][0], m[i][1], m[i][2], m[i][3]
-        );
+    for row in &m {
+        debug!("{:.3}\t{:.3}\t{:.3}\t{:.3}", row[0], row[1], row[2], row[3]);
     }
     debug!("");
 }
@@ -175,7 +172,7 @@ where
     let pixel_shader_src = include_str!("shaders/model.frag");
 
     // TODO: Cache program binary
-    let program = glium::Program::from_source(display, &vertex_shader_src, &pixel_shader_src, None);
+    let program = glium::Program::from_source(display, vertex_shader_src, pixel_shader_src, None);
     let program = match program {
         Ok(p) => p,
         Err(glium::CompilationError(err, _)) => {
@@ -246,7 +243,7 @@ where
         target
             .draw(
                 (&vertex_buf, &normal_buf),
-                &indices,
+                indices,
                 &program,
                 &uniforms,
                 &params,
@@ -261,9 +258,8 @@ where
     let pixels: glium::texture::RawImage2d<u8> = texture.read();
     let img = image::ImageBuffer::from_raw(config.width, config.height, pixels.data.into_owned())
         .unwrap();
-    let img = image::DynamicImage::ImageRgba8(img).flipv();
 
-    img
+    image::DynamicImage::ImageRgba8(img).flipv()
 }
 
 pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
@@ -292,13 +288,14 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
         .unwrap();
 
         match ev {
-            glutin::event::Event::WindowEvent { event, .. }
-                if event == glutin::event::WindowEvent::CloseRequested =>
-            {
+            glutin::event::Event::WindowEvent {
+                event: glutin::event::WindowEvent::CloseRequested,
+                ..
+            } => {
                 *control_flow = ControlFlow::Exit;
                 return;
             }
-            glutin::event::Event::NewEvents(cause) if cause == glutin::event::StartCause::Init => {
+            glutin::event::Event::NewEvents(glutin::event::StartCause::Init) => {
                 render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
             }
             _ => (),
@@ -330,13 +327,11 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
     // =========================
     let mesh = Mesh::load(&config.stl_filename, config.recalc_normals)?;
 
-    let img: image::DynamicImage;
-
     // Create GL context
     // =================
     // 1. If not visible create a headless context.
     // 2. If headless context creation fails, create a normal context with a hidden window.
-    match create_headless_display(&config) {
+    let img: image::DynamicImage = match create_headless_display(config) {
         Ok(display) => {
             let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
             let depthtexture =
@@ -348,14 +343,14 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
                 &depthtexture,
             )
             .unwrap();
-            img = render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
+            render_pipeline(&display, config, &mesh, &mut framebuffer, &texture)
         }
         Err(e) => {
             warn!(
                 "Unable to create headless GL context. Trying hidden window instead. Reason: {:?}",
                 e
             );
-            let (display, _) = create_normal_display(&config)?;
+            let (display, _) = create_normal_display(config)?;
             let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
             let depthtexture =
                 glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
@@ -366,7 +361,7 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
                 &depthtexture,
             )
             .unwrap();
-            img = render_pipeline(&display, &config, &mesh, &mut framebuffer, &texture);
+            render_pipeline(&display, config, &mesh, &mut framebuffer, &texture)
         }
     };
 
@@ -374,7 +369,7 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
 }
 
 pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
-    let img = render_to_image(&config)?;
+    let img = render_to_image(config)?;
 
     // Choose output
     // Write to stdout if user did not specify a file
@@ -438,6 +433,11 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
 ///
 /// render_to_buffer(buf_ptr, width, height, stl_filename_c);
 /// ```
+///
+/// # Safety
+///
+/// * `buf_ptr` _must_ point to a valid initialized buffer, at least `width * height * 4` bytes long.
+/// * `stl_filename_c` must point to a valid null-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn render_to_buffer(
     buf_ptr: *mut u8,
@@ -476,8 +476,8 @@ pub unsafe extern "C" fn render_to_buffer(
     // Setup configuration for the renderer
     let config = Config {
         stl_filename: stl_filename_str.to_string(),
-        width: width,
-        height: height,
+        width,
+        height,
         ..Default::default()
     };
 

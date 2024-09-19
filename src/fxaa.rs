@@ -30,9 +30,9 @@ struct SpriteVertex {
 implement_vertex!(SpriteVertex, position, i_tex_coords);
 
 impl FxaaSystem {
-    pub fn new<F: ?Sized>(facade: &F) -> FxaaSystem
+    pub fn new<F>(facade: &F) -> FxaaSystem
     where
-        F: Facade,
+        F: Facade + ?Sized,
     {
         FxaaSystem {
             context: facade.get_context().clone(),
@@ -63,7 +63,7 @@ impl FxaaSystem {
             index_buffer: glium::index::IndexBuffer::new(
                 facade,
                 glium::index::PrimitiveType::TriangleStrip,
-                &[1 as u16, 2, 0, 3],
+                &[1u16, 2, 0, 3],
             )
             .unwrap(),
 
@@ -92,7 +92,7 @@ where
     let mut target_depth = system.target_depth.borrow_mut();
 
     {
-        let clear = if let &Some(ref tex) = &*target_color {
+        let clear = if let Some(ref tex) = *target_color {
             tex.get_width() != target_dimensions.0
                 || tex.get_height().unwrap() != target_dimensions.1
         } else {
@@ -104,7 +104,7 @@ where
     }
 
     {
-        let clear = if let &Some(ref tex) = &*target_depth {
+        let clear = if let Some(ref tex) = *target_depth {
             tex.get_dimensions() != target_dimensions
         } else {
             false
@@ -117,8 +117,8 @@ where
     if target_color.is_none() {
         let texture = glium::texture::Texture2d::empty(
             &system.context,
-            target_dimensions.0 as u32,
-            target_dimensions.1 as u32,
+            target_dimensions.0,
+            target_dimensions.1,
         )
         .unwrap();
         *target_color = Some(texture);
@@ -129,8 +129,8 @@ where
         let texture = glium::framebuffer::DepthRenderBuffer::new(
             &system.context,
             glium::texture::DepthFormat::I24,
-            target_dimensions.0 as u32,
-            target_dimensions.1 as u32,
+            target_dimensions.0,
+            target_dimensions.1,
         )
         .unwrap();
         *target_depth = Some(texture);
@@ -143,7 +143,7 @@ where
     );
 
     let uniforms = uniform! {
-        tex: &*target_color,
+        tex: target_color,
         enabled: if enabled { 1i32 } else { 0i32 },
         resolution: (target_dimensions.0 as f32, target_dimensions.1 as f32)
     };
