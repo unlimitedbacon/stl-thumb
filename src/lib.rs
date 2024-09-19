@@ -17,7 +17,7 @@ use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
 use glium::{glutin, CapabilitiesSource, Surface};
-use image::{ImageEncoder, ImageOutputFormat};
+use image::{ImageEncoder, ImageFormat};
 use libc::c_char;
 use mesh::Mesh;
 use std::error::Error;
@@ -393,14 +393,19 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
     // If encoding a PNG image, use fastest compression method
     // Not sure if this is really necessary. Fast is the default anyways.
     match config.format {
-        ImageOutputFormat::Png => {
+        ImageFormat::Png => {
             let encoder = image::codecs::png::PngEncoder::new_with_quality(
                 &mut cursor,
                 image::codecs::png::CompressionType::Fast,
                 //image::codecs::png::CompressionType::Default,
                 image::codecs::png::FilterType::Adaptive,
             );
-            encoder.write_image(img.as_bytes(), config.width, config.height, img.color())?;
+            encoder.write_image(
+                img.as_bytes(),
+                config.width,
+                config.height,
+                img.color().into(),
+            )?;
         }
         _ => img.write_to(&mut cursor, config.format.to_owned())?,
     }
@@ -434,7 +439,7 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
 /// render_to_buffer(buf_ptr, width, height, stl_filename_c);
 /// ```
 #[no_mangle]
-pub extern "C" fn render_to_buffer(
+pub unsafe extern "C" fn render_to_buffer(
     buf_ptr: *mut u8,
     width: u32,
     height: u32,
@@ -514,7 +519,7 @@ mod tests {
         let config = Config {
             stl_filename: "test_data/cube.stl".to_string(),
             img_filename: img_filename.clone(),
-            format: image::ImageOutputFormat::Png,
+            format: image::ImageFormat::Png,
             ..Default::default()
         };
 
@@ -539,7 +544,7 @@ mod tests {
         let config = Config {
             stl_filename: "test_data/cube.obj".to_string(),
             img_filename: img_filename.clone(),
-            format: image::ImageOutputFormat::Png,
+            format: image::ImageFormat::Png,
             ..Default::default()
         };
 
@@ -564,7 +569,7 @@ mod tests {
         let config = Config {
             stl_filename: "test_data/cube.3mf".to_string(),
             img_filename: img_filename.clone(),
-            format: image::ImageOutputFormat::Png,
+            format: image::ImageFormat::Png,
             ..Default::default()
         };
 

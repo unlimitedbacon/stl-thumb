@@ -153,7 +153,6 @@ impl Mesh {
         for model in models {
             for object in model.resources.object {
                 if let Some(mesh) = object.mesh {
-                    eprintln!("Received a mesh");
                     for triangle in &mesh.triangles.triangle {
                         // Re-use `Mesh::process_tri`, which creates new vertices for every
                         // triangle.
