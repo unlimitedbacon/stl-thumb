@@ -126,6 +126,8 @@ impl Mesh {
                         .extension()
                         .and_then(std::ffi::OsStr::to_str)
                         .unwrap_or("")
+                        .to_lowercase()
+                        .as_str()
                     {
                         "obj" => Mesh::from_obj(stl_file, recalc_normals)?,
                         "stl" => Mesh::from_stl(stl_file, recalc_normals)?,
