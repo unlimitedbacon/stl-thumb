@@ -139,11 +139,11 @@ impl Mesh {
         }
     }
 
-    pub fn from_3mf<R>(stl_file: R, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
+    pub fn from_3mf<R>(threemf_file: R, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
     where
         R: Read + Seek,
     {
-        let models = threemf::read(stl_file)?;
+        let models = threemf::read(threemf_file)?;
 
         let mut result = None;
 
