@@ -17,7 +17,7 @@ pub enum AAMethod {
 
 #[derive(Clone)]
 pub struct Config {
-    pub stl_filename: String,
+    pub model_filename: String,
     pub img_filename: String,
     pub format: ImageFormat,
     pub width: u32,
@@ -33,7 +33,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            stl_filename: "".to_string(),
+            model_filename: "".to_string(),
             img_filename: "".to_string(),
             format: ImageFormat::Png,
             width: 1024,
@@ -59,7 +59,7 @@ impl Config {
             .version(env!("CARGO_PKG_VERSION"))
             .author(env!("CARGO_PKG_AUTHORS"))
             .arg(
-                clap::Arg::new("STL_FILE")
+                clap::Arg::new("MODEL_FILE")
                     .help("STL file. Use - to read from stdin instead of a file.")
                     .required(true)
                     .index(1),
@@ -130,9 +130,9 @@ impl Config {
             ..Default::default()
         };
 
-        c.stl_filename = matches
-            .remove_one::<String>("STL_FILE")
-            .expect("STL_FILE not provided");
+        c.model_filename = matches
+            .remove_one::<String>("MODEL_FILE")
+            .expect("MODEL_FILE not provided");
         c.img_filename = matches
             .remove_one::<String>("IMG_FILE")
             .expect("IMG_FILE not provided");

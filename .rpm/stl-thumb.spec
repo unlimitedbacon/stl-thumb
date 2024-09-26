@@ -3,7 +3,7 @@
 %define debug_package %{nil}
 
 Name: stl-thumb
-Summary: A fast lightweight thumbnail generator for STL files
+Summary: A fast lightweight thumbnail generator for 3D model(STL, OBJ, 3MF) files
 Version: @@VERSION@@
 Release: @@RELEASE@@%{?dist}
 License: MIT

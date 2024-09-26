@@ -101,37 +101,37 @@ pub struct Mesh {
     pub normals: Vec<Normal>,
     pub indices: Vec<usize>,
     pub bounds: BoundingBox,
-    stl_had_normals: bool,
+    model_had_normals: bool,
 }
 
 impl Mesh {
     // Load mesh data from file (if provided) or stdin
-    pub fn load(stl_filename: &str, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
+    pub fn load(model_filename: &str, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
         // TODO: Add support for URIs instead of plain file names
         // https://developer.gnome.org/integration-guide/stable/thumbnailer.html.en
-        match stl_filename {
+        match model_filename {
             "-" => {
                 // create_stl_reader requires Seek, so we must read the entire stream into memory before proceeding.
                 // So I guess this can just consume all RAM if it gets bad input. Hmmm....
-                let mut input_buffer = Vec::new();
-                io::stdin().read_to_end(&mut input_buffer)?;
-                Mesh::from_stl(Cursor::new(input_buffer), recalc_normals)
+                let mut model_buffer = Vec::new();
+                io::stdin().read_to_end(&mut model_buffer)?;
+                Mesh::from_stl(Cursor::new(model_buffer), recalc_normals)
             }
             _ => {
-                let stl_filename = std::path::Path::new(stl_filename);
+                let model_filename = std::path::Path::new(model_filename);
                 // TODO: Try BufReader and see if it's faster
-                let stl_file = File::open(stl_filename)?;
+                let model_file = File::open(model_filename)?;
                 Ok(
-                    match stl_filename
+                    match model_filename
                         .extension()
                         .and_then(std::ffi::OsStr::to_str)
                         .unwrap_or("")
                         .to_lowercase()
                         .as_str()
                     {
-                        "obj" => Mesh::from_obj(stl_file, recalc_normals)?,
-                        "stl" => Mesh::from_stl(stl_file, recalc_normals)?,
-                        "3mf" => Mesh::from_3mf(stl_file, recalc_normals)?,
+                        "obj" => Mesh::from_obj(model_file, recalc_normals)?,
+                        "stl" => Mesh::from_stl(model_file, recalc_normals)?,
+                        "3mf" => Mesh::from_3mf(model_file, recalc_normals)?,
                         _ => unimplemented!("Format not supported"),
                     },
                 )
@@ -139,11 +139,11 @@ impl Mesh {
         }
     }
 
-    pub fn from_3mf<R>(threemf_file: R, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
+    pub fn from_3mf<R>(model_file: R, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
     where
         R: Read + Seek,
     {
-        let models = threemf::read(threemf_file)?;
+        let models = threemf::read(model_file)?;
 
         let mut result = None;
 
@@ -173,7 +173,7 @@ impl Mesh {
                                 normals: Vec::new(),
                                 indices: Vec::new(),
                                 bounds: BoundingBox::new(&triangle.vertices[0]),
-                                stl_had_normals: false,
+                                model_had_normals: false,
                             })
                             .process_tri(&triangle, true);
                     }
@@ -184,13 +184,13 @@ impl Mesh {
         Ok(result.unwrap())
     }
 
-    pub fn from_stl<R>(mut stl_file: R, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
+    pub fn from_stl<R>(mut model_file: R, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
     where
         R: Read + Seek,
     {
-        //let stl = stl_io::read_stl(&mut stl_file)?;
-        //debug!("{:?}", stl);
-        let mut stl_iter = stl_io::create_stl_reader(&mut stl_file)?;
+        //let model = stl_io::read_stl(&mut model_file)?;
+        //debug!("{:?}", model);
+        let mut stl_iter = stl_io::create_stl_reader(&mut model_file)?;
 
         // Get starting point for finding bounding box
         // TODO: Remove unwraps so lib can fail gracefully instead of panicing
@@ -202,7 +202,7 @@ impl Mesh {
             normals: Vec::new(),
             indices: Vec::new(),
             bounds: BoundingBox::new(&v1),
-            stl_had_normals: true,
+            model_had_normals: true,
         };
 
         let mut face_count = 0;
@@ -215,7 +215,7 @@ impl Mesh {
             //debug!("{:?}",triangle);
         }
 
-        if !mesh.stl_had_normals {
+        if !mesh.model_had_normals {
             warn!("STL file missing surface normals");
         }
         info!("Bounds:");
@@ -227,9 +227,9 @@ impl Mesh {
     }
 
     pub fn from_obj(obj_file: File, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>> {
-        let mut input = BufReader::new(obj_file);
+        let mut model = BufReader::new(obj_file);
         let (models, _) = tobj::load_obj_buf(
-            &mut input,
+            &mut model,
             &LoadOptions {
                 single_index: true,
                 triangulate: true,
@@ -248,7 +248,7 @@ impl Mesh {
                 *first_vertex.next().ok_or("Empty Mesh")?,
                 *first_vertex.next().ok_or("Empty Mesh")?,
             ])),
-            stl_had_normals: true,
+            model_had_normals: true,
         };
         for model in &models {
             let tri_idx = &model.mesh.indices;
@@ -308,7 +308,7 @@ impl Mesh {
         // Use normal from STL file if it is provided, otherwise calculate it ourselves
         let n: Normal;
         if recalc_normals || (tri.normal == stl_io::Vector::new([0.0, 0.0, 0.0])) {
-            self.stl_had_normals = false;
+            self.model_had_normals = false;
             n = normal(tri);
         } else {
             n = Normal {

@@ -7,7 +7,7 @@ use stl_thumb::config::Config;
 
 fn benchy_stl() {
     let config = Config {
-        stl_filename: "test_data/3DBenchy.stl".to_string(),
+        model_filename: "test_data/3DBenchy.stl".to_string(),
         img_filename: "benchy.png".to_string(),
         width: 1024,
         height: 768,
@@ -19,7 +19,7 @@ fn benchy_stl() {
 
 fn benchy_obj() {
     let config = Config {
-        stl_filename: "test_data/3DBenchy.obj".to_string(),
+        model_filename: "test_data/3DBenchy.obj".to_string(),
         img_filename: "3DBenchy_obj.png".to_string(),
         width: 1024,
         height: 768,

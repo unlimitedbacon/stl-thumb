@@ -7,7 +7,7 @@ use stl_thumb::config::Config;
 
 fn shipwreck() {
     let config = Config {
-        stl_filename: "test_data/shipwreck.stl".to_string(),
+        model_filename: "test_data/shipwreck.stl".to_string(),
         img_filename: "shipwreck.png".to_string(),
         width: 1024,
         height: 768,

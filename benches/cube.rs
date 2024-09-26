@@ -7,7 +7,7 @@ use stl_thumb::config::Config;
 
 fn cube() {
     let config = Config {
-        stl_filename: "test_data/cube.stl".to_string(),
+        model_filename: "test_data/cube.stl".to_string(),
         img_filename: "cube.png".to_string(),
         width: 1024,
         height: 768,
@@ -19,7 +19,7 @@ fn cube() {
 
 fn cube_obj() {
     let config = Config {
-        stl_filename: "test_data/cube.obj".to_string(),
+        model_filename: "test_data/cube.obj".to_string(),
         img_filename: "cube_obj.png".to_string(),
         width: 1024,
         height: 768,

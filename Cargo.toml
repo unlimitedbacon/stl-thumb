@@ -2,12 +2,12 @@
 name = "stl-thumb"
 version = "0.5.0"
 authors = ["Tyler Anderson <unlimitedbacon@gmail.com>"]
-description = "A fast lightweight thumbnail generator for STL files"
+description = "A fast lightweight thumbnail generator for 3D model(STL, OBJ, 3MF) files"
 readme = "README.md"
 repository = "https://github.com/unlimitedbacon/stl-thumb"
 license = "MIT"
 homepage = "https://github.com/unlimitedbacon/stl-thumb"
-keywords = ["3d", "3dprinting", "stl"]
+keywords = ["3d", "3dprinting", "stl", "obj", "3mf"]
 categories = ["command-line-utilities", "graphics"]
 exclude = [
     "test_data/*"
@@ -63,8 +63,8 @@ harness = false
 license-file = ["LICENSE", "3"]
 depends = "libgl1, libc6, libgcc1, libosmesa6-dev"
 extended-description = """\
-Stl-thumb is a fast lightweight thumbnail generator for STL files. \
-It can show previews for STL files in your file manager on Linux and Windows. \
+Stl-thumb is a fast lightweight thumbnail generator for 3D model(STL, OBJ, 3MF) files. \
+It can show previews for 3D model files in your file manager on Linux and Windows. \
 It is written in Rust and uses OpenGL. """
 section = "graphics"
 priority = "optional"

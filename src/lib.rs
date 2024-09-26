@@ -263,9 +263,9 @@ where
 }
 
 pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
-    // Get geometry from STL file
+    // Get geometry from model file
     // ==========================
-    let mesh = Mesh::load(&config.stl_filename, config.recalc_normals)?;
+    let mesh = Mesh::load(&config.model_filename, config.recalc_normals)?;
 
     // Create GL context
     // =================
@@ -323,9 +323,9 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
-    // Get geometry from STL file
+    // Get geometry from model file
     // =========================
-    let mesh = Mesh::load(&config.stl_filename, config.recalc_normals)?;
+    let mesh = Mesh::load(&config.model_filename, config.recalc_normals)?;
 
     // Create GL context
     // =================
@@ -414,36 +414,36 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
 
 /// Allows utilizing `stl-thumb` from C-like languages
 ///
-/// This function renders an image of the file `stl_filename_c` and stores it into the buffer `buf_ptr`.
+/// This function renders an image of the file `model_filename_c` and stores it into the buffer `buf_ptr`.
 ///
 /// You must provide a memory buffer large enough to store the image. Images are written in 8-bit RGBA format,
-/// so the buffer must be at least `width`*`height`*4 bytes in size. `stl_filename_c` is a pointer to a C string with
+/// so the buffer must be at least `width`*`height`*4 bytes in size. `model_filename_c` is a pointer to a C string with
 /// the file path.
 ///
 /// Returns `true` if succesful and `false` if unsuccesful.
 ///
 /// # Example in C
 /// ```c
-/// const char* stl_filename_c = "3DBenchy.stl";
+/// const char* model_filename_c = "3DBenchy.stl";
 /// int width = 256;
 /// int height = 256;
 ///
 /// int img_size = width * height * 4;
 /// buf_ptr = (uchar *) malloc(img_size);
 ///
-/// render_to_buffer(buf_ptr, width, height, stl_filename_c);
+/// render_to_buffer(buf_ptr, width, height, model_filename_c);
 /// ```
 ///
 /// # Safety
 ///
 /// * `buf_ptr` _must_ point to a valid initialized buffer, at least `width * height * 4` bytes long.
-/// * `stl_filename_c` must point to a valid null-terminated string.
+/// * `model_filename_c` must point to a valid null-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn render_to_buffer(
     buf_ptr: *mut u8,
     width: u32,
     height: u32,
-    stl_filename_c: *const c_char,
+    model_filename_c: *const c_char,
 ) -> bool {
     // Workaround for issues with OpenGL 3.1 on Mesa 18.3
     #[cfg(target_os = "linux")]
@@ -458,24 +458,24 @@ pub unsafe extern "C" fn render_to_buffer(
     let buf = unsafe { slice::from_raw_parts_mut(buf_ptr, buf_size) };
 
     // Check validity of provided file path string
-    let stl_filename_cstr = unsafe {
-        if stl_filename_c.is_null() {
-            error!("STL file path pointer is null");
+    let model_filename_cstr = unsafe {
+        if model_filename_c.is_null() {
+            error!("model file path pointer is null");
             return false;
         }
-        CStr::from_ptr(stl_filename_c)
+        CStr::from_ptr(model_filename_c)
     };
-    let stl_filename_str = match stl_filename_cstr.to_str() {
+    let model_filename_str = match model_filename_cstr.to_str() {
         Ok(s) => s,
         Err(_) => {
-            error!("Invalid STL file path {:?}", stl_filename_cstr);
+            error!("Invalid model file path {:?}", model_filename_cstr);
             return false;
         }
     };
 
     // Setup configuration for the renderer
     let config = Config {
-        stl_filename: stl_filename_str.to_string(),
+        model_filename: model_filename_str.to_string(),
         width,
         height,
         ..Default::default()
@@ -517,7 +517,7 @@ mod tests {
     fn cube_stl() {
         let img_filename = "cube-stl.png".to_string();
         let config = Config {
-            stl_filename: "test_data/cube.stl".to_string(),
+            model_filename: "test_data/cube.stl".to_string(),
             img_filename: img_filename.clone(),
             format: image::ImageFormat::Png,
             ..Default::default()
@@ -542,7 +542,7 @@ mod tests {
     fn cube_obj() {
         let img_filename = "cube-obj.png".to_string();
         let config = Config {
-            stl_filename: "test_data/cube.obj".to_string(),
+            model_filename: "test_data/cube.obj".to_string(),
             img_filename: img_filename.clone(),
             format: image::ImageFormat::Png,
             ..Default::default()
@@ -567,7 +567,7 @@ mod tests {
     fn cube_3mf() {
         let img_filename = "cube-3mf.png".to_string();
         let config = Config {
-            stl_filename: "test_data/cube.3mf".to_string(),
+            model_filename: "test_data/cube.3mf".to_string(),
             img_filename: img_filename.clone(),
             format: image::ImageFormat::Png,
             ..Default::default()
