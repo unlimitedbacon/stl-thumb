@@ -113,9 +113,9 @@ impl Mesh {
             "-" => {
                 // create_stl_reader requires Seek, so we must read the entire stream into memory before proceeding.
                 // So I guess this can just consume all RAM if it gets bad input. Hmmm....
-                let mut model_buffer = Vec::new();
-                io::stdin().read_to_end(&mut model_buffer)?;
-                Mesh::from_stl(Cursor::new(model_buffer), recalc_normals)
+                let mut input_buffer = Vec::new();
+                io::stdin().read_to_end(&mut input_buffer)?;
+                Mesh::from_stl(Cursor::new(input_buffer), recalc_normals)
             }
             _ => {
                 let model_filename = std::path::Path::new(model_filename);
