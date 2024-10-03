@@ -5,7 +5,7 @@
 [![Documentation](https://img.shields.io/docsrs/stl-thumb/latest)](https://docs.rs/stl-thumb/latest/stl_thumb/)
 [![Crates.io](https://img.shields.io/crates/v/stl-thumb.svg)](https://crates.io/crates/stl-thumb)
 
-Stl-thumb is a fast lightweight thumbnail generator for STL files. It can show previews for STL files in your file manager on Linux and Windows. It is written in Rust and uses OpenGL.
+Stl-thumb is a fast lightweight thumbnail generator for 3D model(STL, OBJ, 3MF) files. It can show previews for model files in your file manager on Linux and Windows. It is written in Rust and uses OpenGL.
 
 ![Screenshot](https://user-images.githubusercontent.com/3131268/116009182-f3f89c80-a5cc-11eb-817d-91e8a9fad279.png)
 
@@ -76,22 +76,22 @@ $ cargo generate-rpm
 ## Command Line Usage
 
 ```
-$ stl-thumb <STL_FILE> [IMG_FILE]
+$ stl-thumb <MODEL_FILE> [IMG_FILE]
 ```
 
 ### Options
 
-| Option        | Description                                             |
-| ------------- | ------------------------------------------------------- |
-| <STL_FILE>    | The STL file you want a picture of. Use - to read from stdin instead of a file. |
-| <IMG_FILE>    | The thumbnail image file that will be created. Use - to write to stdout instead of a file. |
-| -s, --size \<size\>   | Specify width of the image. It will always be a square. |
+| Option        | Description                                                                                                                                                                           |
+| ------------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| <MODEL_FILE>    | The model file you want a picture of. Use - to read from stdin instead of a file.                                                                                                     |
+| <IMG_FILE>    | The thumbnail image file that will be created. Use - to write to stdout instead of a file.                                                                                            |
+| -s, --size \<size\>   | Specify width of the image. It will always be a square.                                                                                                                               |
 | -f, --format \<format\> | The format of the image file. If not specified it will be determined from the file extension, or default to PNG if there is no extension. Supported formats: PNG, JPEG, GIF, ICO, BMP |
-| -m, --material \<ambient\> \<diffuse\> \<specular\> | Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue. |
-| -b, --backround \<color> | The background color with transparency (rgba). Default is ffffff00. |
-| -a, --antialiasing [none, fxaa] | Anti-aliasing method. Default is FXAA, which is fast but may introduce artifacts. |
-| --recalc-normals | Force recalculation of face normals. Use when dealing with malformed STL files. |
-| -x            | Display the image in a window instead of saving a file. |
-| -h, --help    | Prints help information.                                |
-| -V, --version | Prints version information.                             |
-| -v[v][v]      | Increase message verbosity. Levels: Errors, Warnings, Info, Debugging |
+| -m, --material \<ambient\> \<diffuse\> \<specular\> | Colors for rendering the mesh using the Phong reflection model. Requires 3 colors as rgb hex values: ambient, diffuse, and specular. Defaults to blue.                                |
+| -b, --backround \<color> | The background color with transparency (rgba). Default is ffffff00.                                                                                                                   |
+| -a, --antialiasing [none, fxaa] | Anti-aliasing method. Default is FXAA, which is fast but may introduce artifacts.                                                                                                     |
+| --recalc-normals | Force recalculation of face normals. Use when dealing with malformed STL files.                                                                                                       |
+| -x            | Display the image in a window instead of saving a file.                                                                                                                               |
+| -h, --help    | Prints help information.                                                                                                                                                              |
+| -V, --version | Prints version information.                                                                                                                                                           |
+| -v[v][v]      | Increase message verbosity. Levels: Errors, Warnings, Info, Debugging                                                                                                                 |

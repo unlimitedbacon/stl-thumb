@@ -25,7 +25,7 @@ fn main() {
         .init()
         .unwrap();
 
-    info!("STL File: {}", config.stl_filename);
+    info!("MODEL File: {}", config.model_filename);
     info!("IMG File: {}", config.img_filename);
 
     if config.visible {
