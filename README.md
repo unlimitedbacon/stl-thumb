@@ -69,7 +69,7 @@ $ cargo deb
 ```
 ### Building the .rpm-package:
 ```
-$ cargo install generate-rpm #this is an additional dependency
+$ cargo install cargo-generate-rpm #this is an additional dependency
 $ cargo generate-rpm
 ```
 
