@@ -81,7 +81,7 @@ jobs:
       run: |
         cargo build --release
         cargo generate-rpm --target-dir ./target --target ${{ matrix.target }}
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: deb-rpm-${{ matrix.target }}
         path: |
