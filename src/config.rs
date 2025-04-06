@@ -1,3 +1,4 @@
+use cgmath::MetricSpace;
 use image::ImageFormat;
 use std::f32;
 use std::path::Path;
@@ -28,6 +29,8 @@ pub struct Config {
     pub background: (f32, f32, f32, f32),
     pub aamethod: AAMethod,
     pub recalc_normals: bool,
+    pub cam_fov_deg: f32,
+    pub cam_position: cgmath::Point3<f32>,
 }
 
 impl Default for Config {
@@ -48,6 +51,12 @@ impl Default for Config {
             background: (0.0, 0.0, 0.0, 0.0),
             aamethod: AAMethod::FXAA,
             recalc_normals: false,
+            cam_position: cgmath::Point3 {
+                x: 2.0,
+                y: -4.0,
+                z: 2.0,
+            },
+            cam_fov_deg: 42.0, //Experimentaly determined value to see all geometry in the -1 to 1 cube at an isometric view
         }
     }
 }
@@ -123,8 +132,16 @@ impl Config {
                 clap::Arg::new("recalc_normals")
                     .help("Force recalculation of face normals. Use when dealing with malformed STL files.")
                     .long("recalc-normals")
-            )
-            .get_matches();
+            ).arg(
+                clap::Arg::new("camera_position")
+                    .help("Set Position of Camera")
+                    .short('c')
+                    .long("cam-pos")
+                    .required(false)
+                    .num_args(3)
+                    .value_delimiter(',')
+                    .value_parser(clap::value_parser!(f32))
+            ).get_matches();
 
         let mut c = Config {
             ..Default::default()
@@ -173,8 +190,33 @@ impl Config {
                 _ => unreachable!(),
             }
         }
-        c.recalc_normals = matches.contains_id("recalc_normals");
 
+        if let Some(mut pos) = matches.get_many::<f32>("camera_position") {
+            // create an Origin, we'll need it to find the distance of our camera to it
+            let origin = cgmath::Point3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            };
+            
+            // calculate the distance of our camera in the default case
+            let default = c.cam_position;
+            let def_distance = default.distance(origin);
+            
+            // update our camera position based on the arguments
+            c.cam_position = cgmath::Point3 {
+                x: *pos.next().expect("x value not found"),
+                y: *pos.next().expect("y value not found"),
+                z: *pos.next().expect("z value not found")
+            };
+            // calculate the new distance to our origin
+            let distance = c.cam_position.distance(origin);
+
+            // change our fov so that our object will be the same size as before, regardless of camera distance
+            c.cam_fov_deg = c.cam_fov_deg * def_distance / distance;
+        }
+
+        c.recalc_normals = matches.contains_id("recalc_normals");
         c
     }
 }

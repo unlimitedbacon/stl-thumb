@@ -27,14 +27,6 @@ use std::{io, panic, slice, thread, time};
 #[cfg(target_os = "linux")]
 use std::env;
 
-// TODO: Move this stuff to config module
-const CAM_FOV_DEG: f32 = 30.0;
-const CAM_POSITION: cgmath::Point3<f32> = cgmath::Point3 {
-    x: 2.0,
-    y: -4.0,
-    z: 2.0,
-};
-
 fn print_matrix(m: [[f32; 4]; 4]) {
     for row in &m {
         debug!("{:.3}\t{:.3}\t{:.3}\t{:.3}", row[0], row[1], row[2], row[3]);
@@ -198,7 +190,7 @@ where
 
     // View matrix (convert to positions relative to camera)
     let view_matrix = cgmath::Matrix4::look_at_rh(
-        CAM_POSITION,
+        config.cam_position,
         cgmath::Point3::origin(),
         cgmath::Vector3::unit_z(),
     );
@@ -207,7 +199,7 @@ where
 
     // Perspective matrix (give illusion of depth)
     let perspective_matrix = cgmath::perspective(
-        cgmath::Deg(CAM_FOV_DEG),
+        cgmath::Deg(config.cam_fov_deg),
         config.width as f32 / config.height as f32,
         0.1,
         1024.0,
