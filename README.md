@@ -95,3 +95,27 @@ $ stl-thumb <MODEL_FILE> [IMG_FILE]
 | -h, --help    | Prints help information.                                                                                                                                                              |
 | -V, --version | Prints version information.                                                                                                                                                           |
 | -v[v][v]      | Increase message verbosity. Levels: Errors, Warnings, Info, Debugging                                                                                                                 |
+
+## Global Configuration
+
+If you want to set some settings of this program globally so that you don't have to specify them via cli,
+or if you want to configure settings for automatic thumbnail generation, you can use the following config.
+
+You need to create either "/etc/stl-thumb/conf.ini" or "$HOME/.config/stl-thumb/conf.ini".
+
+
+```
+[Colors]
+color=#65BB3A
+#red=0.0
+#green=0.0
+#blue=0.0
+#background="#ffff0000"
+
+[Renderer]
+aamethod=fxaa # or none
+width=1024
+height=1024
+format=png # or any of: jpeg, gif, webp, pnm, tiff, tga, dds, bmp, ico, hdr, openexr, farbfeld, avif, qoi
+recalc_normals=true # or false
+```

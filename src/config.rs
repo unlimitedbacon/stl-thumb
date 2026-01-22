@@ -1,6 +1,8 @@
 use image::ImageFormat;
 use std::f32;
 use std::path::Path;
+use ini::Ini;
+use std::env;
 
 #[derive(Clone)]
 pub struct Material {
@@ -32,7 +34,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Config {
+        let cfg = Config {
             model_filename: "".to_string(),
             img_filename: "".to_string(),
             format: ImageFormat::Png,
@@ -48,7 +50,12 @@ impl Default for Config {
             background: (0.0, 0.0, 0.0, 0.0),
             aamethod: AAMethod::FXAA,
             recalc_normals: false,
-        }
+        };
+
+        // at the moment unused, allow specification via cli.
+        let override_config_file = "".to_string();
+        Self::read_default_values_from_ini(cfg, override_config_file)
+
     }
 }
 
@@ -176,6 +183,101 @@ impl Config {
         c.recalc_normals = matches.contains_id("recalc_normals");
 
         c
+    }
+
+    fn read_default_values_from_ini(mut hardcoded: Config, config_file_path_override: String) -> Config {
+
+        let config_locations = [
+            config_file_path_override,
+            env::var("HOME").unwrap()+"/.config/stl-thumb/conf.ini",
+            "/etc/stl-thumb/conf.ini".to_string(),
+        ];
+
+        let config = config_locations
+            .into_iter()
+            .filter(|path| Path::new(path).exists())
+            .next();
+
+        if config.is_none() {
+            return hardcoded
+        }
+
+        let conf = Ini::load_from_file(config.unwrap()).unwrap();
+        let colors = conf.section(Some("Colors")).unwrap();
+
+        if let Some(diffuse) = colors.get("color") {
+            hardcoded.material.diffuse = html_to_rgb(&*diffuse.replace("#", ""));
+            hardcoded.material.ambient[0] = hardcoded.material.diffuse[0]*0.1;
+            hardcoded.material.ambient[1] = hardcoded.material.diffuse[1]*0.1;
+            hardcoded.material.ambient[2] = hardcoded.material.diffuse[2]*0.1;
+        }
+
+        if let Some(red) = colors.get("red") {
+            let red_value = red.parse::<f32>().unwrap();
+            hardcoded.material.diffuse[0] = red_value;
+            hardcoded.material.ambient[0] = red_value * 0.1;
+        }
+
+        if let Some(green) = colors.get("green") {
+            let green_value = green.parse::<f32>().unwrap();
+            hardcoded.material.diffuse[1] = green_value;
+            hardcoded.material.ambient[1] = green_value * 0.1;
+        }
+
+        if let Some(blue) = colors.get("blue") {
+            let blue_value = blue.parse::<f32>().unwrap();
+            hardcoded.material.diffuse[2] = blue_value;
+            hardcoded.material.ambient[2] = blue_value * 0.1;
+        }
+
+        if let Some(bg) = colors.get("background") {
+            hardcoded.background = html_to_rgba(&*bg.replace("#", ""));
+        }
+
+        let renderer = conf.section(Some("Renderer")).unwrap();
+
+        if let Some(aamethod) = renderer.get("aamethod") {
+            match aamethod {
+                "none" => hardcoded.aamethod = AAMethod::None,
+                "fxaa" => hardcoded.aamethod = AAMethod::FXAA,
+                _ => {}
+            }
+        }
+
+        if let Some(width) = colors.get("width") {
+            hardcoded.width = width.parse().unwrap()
+        }
+
+        if let Some(height) = colors.get("height") {
+            hardcoded.height = height.parse().unwrap()
+        }
+
+        if let Some(format) = colors.get("format") {
+            match format {
+                "png" => hardcoded.format = ImageFormat::Png,
+                "jpeg" => hardcoded.format = ImageFormat::Jpeg,
+                "gif" => hardcoded.format = ImageFormat::Gif,
+                "webp" => hardcoded.format = ImageFormat::WebP,
+                "pnm" => hardcoded.format = ImageFormat::Pnm,
+                "tiff" => hardcoded.format = ImageFormat:: Tiff,
+                "tga" => hardcoded.format = ImageFormat::Tga,
+                "dds" => hardcoded.format = ImageFormat::Dds,
+                "bmp" => hardcoded.format = ImageFormat:: Bmp,
+                "ico" => hardcoded.format = ImageFormat::Ico,
+                "hdr" => hardcoded.format = ImageFormat::Hdr,
+                "openexr" => hardcoded.format = ImageFormat::OpenExr,
+                "farbfeld" => hardcoded.format = ImageFormat::Farbfeld,
+                "avif" => hardcoded.format = ImageFormat::Avif,
+                "qoi" => hardcoded.format = ImageFormat::Qoi,
+                _ => {}
+            }
+        }
+
+        if let Some(recalc_normals) = colors.get("recalc_normals") {
+            hardcoded.recalc_normals = recalc_normals.parse().unwrap()
+        }
+
+        hardcoded
     }
 }
 
