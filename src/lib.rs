@@ -90,6 +90,19 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
     Ok(display)
 }
 
+
+#[cfg(target_os = "macos")]
+fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
+    let event_loop: EventLoop<()> = EventLoopBuilder::new().build();
+    let size = PhysicalSize::new(config.width, config.height);
+    let cb = glutin::ContextBuilder::new();
+    let context = cb.build_headless(&event_loop, size)?;
+
+    let context = unsafe { context.treat_as_current() };
+    let display = glium::backend::glutin::headless::Headless::new(context)?;
+    print_context_info(&display);
+    Ok(display)
+}
 #[cfg(target_os = "linux")]
 fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
     use glium::glutin::platform::unix::{EventLoopBuilderExtUnix, HeadlessContextExt};

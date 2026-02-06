@@ -1,12 +1,11 @@
-#version 120
-
-//precision mediump float;
+#version 150
 
 uniform vec2 resolution;
 uniform sampler2D tex;
 uniform int enabled;
 
-varying vec2 v_tex_coords;
+in vec2 v_tex_coords;
+out vec4 fragColor;
 
 #define FXAA_REDUCE_MIN   (1.0/ 128.0)
 #define FXAA_REDUCE_MUL   (1.0 / 8.0)
@@ -18,16 +17,14 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,
             vec2 v_rgbM) {
     vec4 color;
 
-    // Sample adjascent pixels
     vec2 inverseVP = vec2(1.0 / resolution.x, 1.0 / resolution.y);
-    vec3 rgbNW = texture2D(tex, v_rgbNW).xyz;
-    vec3 rgbNE = texture2D(tex, v_rgbNE).xyz;
-    vec3 rgbSW = texture2D(tex, v_rgbSW).xyz;
-    vec3 rgbSE = texture2D(tex, v_rgbSE).xyz;
-    vec4 texColor = texture2D(tex, v_rgbM);
+    vec3 rgbNW = texture(tex, v_rgbNW).xyz;
+    vec3 rgbNE = texture(tex, v_rgbNE).xyz;
+    vec3 rgbSW = texture(tex, v_rgbSW).xyz;
+    vec3 rgbSE = texture(tex, v_rgbSE).xyz;
+    vec4 texColor = texture(tex, v_rgbM);
     vec3 rgbM  = texColor.xyz;
 
-    // Calculate luminance
     vec3 luma = vec3(0.299, 0.587, 0.114);
     vec4 luma4 = vec4(0.299, 0.587, 0.114, 0.0);
 
@@ -39,7 +36,6 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,
     float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
     float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
     
-    // Determining blend direction
     vec2 dir;
     dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
     dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));
@@ -52,32 +48,29 @@ vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,
               max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX),
               dir * rcpDirMin)) * inverseVP;
     
-    // Blending
-    // A lot of stuff here is my attempt to incorporate the alpha channel into the blending. I don't think I did it right. ¯\_(ツ)_/¯
-    // A bit of the background color still bleeds through around the edges of the image. It's hardly noticable, though.
     vec2 coordAA = fragCoord * inverseVP + dir * (1.0 / 3.0 - 0.5);
     vec2 coordAB = fragCoord * inverseVP + dir * (2.0 / 3.0 - 0.5);
-    float alphaAA = texture2D(tex, coordAA).a;
-    float alphaAB = texture2D(tex, coordAB).a;
+    float alphaAA = texture(tex, coordAA).a;
+    float alphaAB = texture(tex, coordAB).a;
     float alphaATotal = alphaAA + alphaAB;
     float weightAA = alphaAA / alphaATotal;
     float weightAB = alphaAB / alphaATotal;
-    vec4 rgbA = vec4( // Multiply by 2
-        texture2D(tex, coordAA).rgb*weightAA + texture2D(tex, coordAB).rgb*weightAB,
+    vec4 rgbA = vec4(
+        texture(tex, coordAA).rgb*weightAA + texture(tex, coordAB).rgb*weightAB,
         0.5 * (alphaAA + alphaAB)
     );
 
     vec2 coordBC = fragCoord * inverseVP + dir * -0.5;
     vec2 coordBD = fragCoord * inverseVP + dir * 0.5;
-    float alphaBC = texture2D(tex, coordBC).a;
-    float alphaBD = texture2D(tex, coordBD).a;
+    float alphaBC = texture(tex, coordBC).a;
+    float alphaBD = texture(tex, coordBD).a;
     float alphaBTotal = alphaAA + alphaAB + alphaBC + alphaBD;
     float weightBA = alphaAA / alphaBTotal;
     float weightBB = alphaAB / alphaBTotal;
     float weightBC = alphaBC / alphaBTotal;
     float weightBD = alphaBD / alphaBTotal;
     vec4 rgbB = vec4(
-        texture2D(tex, coordAA).rgb*weightBA + texture2D(tex, coordAB).rgb*weightBB + texture2D(tex, coordBC).rgb*weightBC + texture2D(tex, coordBD).rgb*weightBD,
+        texture(tex, coordAA).rgb*weightBA + texture(tex, coordAB).rgb*weightBB + texture(tex, coordBC).rgb*weightBC + texture(tex, coordBD).rgb*weightBD,
         0.25 * (alphaAA + alphaAB + alphaBC + alphaBD)
     );
 
@@ -102,7 +95,7 @@ void main() {
         color = fxaa(tex, fragCoord, resolution, v_rgbNW, v_rgbNE, v_rgbSW,
                      v_rgbSE, v_rgbM);
     } else {
-        color = texture2D(tex, v_tex_coords);
+        color = texture(tex, v_tex_coords);
     }
-    gl_FragColor = color;
+    fragColor = color;
 }
