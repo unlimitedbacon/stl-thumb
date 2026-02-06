@@ -1,9 +1,9 @@
-#version 120
+#version 150
 
-attribute vec2 position;
-attribute vec2 i_tex_coords;
+in vec2 position;
+in vec2 i_tex_coords;
 
-varying vec2 v_tex_coords;
+out vec2 v_tex_coords;
 
 void main() {
     gl_Position = vec4(position, 0.0, 1.0);

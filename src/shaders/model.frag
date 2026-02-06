@@ -1,7 +1,9 @@
-#version 120
+#version 150
 
-varying vec3 v_normal;
-varying vec3 v_position;
+in vec3 v_normal;
+in vec3 v_position;
+
+out vec4 fragColor;
 
 uniform vec3 u_light;
 
@@ -16,11 +18,5 @@ void main() {
     vec3 half_direction = normalize(normalize(u_light) + camera_dir);
     float specular = pow(max(dot(half_direction, normalize(v_normal)), 0.0), 16.0);
 
-    // Alternative specular method
-    // vec3 R = reflect( normalize(-u_light), normalize(v_normal) );
-    // float cosAlpha = clamp( dot(camera_dir,R), 0, 1 );
-    // float specular = pow( cosAlpha, 4.0 );
-
-    gl_FragColor = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
+    fragColor = vec4(ambient_color + diffuse * diffuse_color + specular * specular_color, 1.0);
 }
-
