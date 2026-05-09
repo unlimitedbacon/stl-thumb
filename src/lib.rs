@@ -22,6 +22,7 @@ use libc::c_char;
 use mesh::Mesh;
 use std::error::Error;
 use std::ffi::CStr;
+use std::sync::{mpsc, OnceLock};
 use std::{io, panic, slice, thread, time};
 
 #[cfg(target_os = "linux")]
@@ -76,7 +77,14 @@ fn create_normal_display(
 }
 
 #[cfg(target_os = "windows")]
-fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
+struct HeadlessGpu {
+    /// glutin/Winit require the event loop to stay alive while the context is used.
+    _event_loop: Option<EventLoop<()>>,
+    display: glium::HeadlessRenderer,
+}
+
+#[cfg(target_os = "windows")]
+fn create_headless_gpu(config: &Config) -> Result<HeadlessGpu, Box<dyn Error>> {
     use glium::glutin::platform::windows::EventLoopBuilderExtWindows;
 
     let event_loop: EventLoop<()> = EventLoopBuilder::new().with_any_thread(true).build();
@@ -87,11 +95,21 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
     let context = unsafe { context.treat_as_current() };
     let display = glium::backend::glutin::headless::Headless::new(context)?;
     print_context_info(&display);
-    Ok(display)
+    Ok(HeadlessGpu {
+        _event_loop: Some(event_loop),
+        display,
+    })
 }
 
 #[cfg(target_os = "linux")]
-fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
+struct HeadlessGpu {
+    /// Wayland/X path: keep the loop that created the context alive. Pure OSMesa has no loop.
+    _event_loop: Option<EventLoop<()>>,
+    display: glium::HeadlessRenderer,
+}
+
+#[cfg(target_os = "linux")]
+fn create_headless_gpu(config: &Config) -> Result<HeadlessGpu, Box<dyn Error>> {
     use glium::glutin::platform::unix::{EventLoopBuilderExtUnix, HeadlessContextExt};
 
     let size = PhysicalSize::new(config.width, config.height);
@@ -106,7 +124,7 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
     let event_loop_result: Result<EventLoop<()>, _> =
         panic::catch_unwind(|| EventLoopBuilder::new().with_any_thread(true).build());
 
-    match event_loop_result {
+    let (event_loop_opt, display) = match event_loop_result {
         Ok(event_loop) => {
             context = {
                 // Try surfaceless, headless, and osmesa in that order
@@ -126,6 +144,10 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
                     }
                 }
             };
+            let context = unsafe { context.treat_as_current() };
+            let display = glium::backend::glutin::headless::Headless::new(context)?;
+            print_context_info(&display);
+            (Some(event_loop), display)
         }
         Err(e) => {
             warn!(
@@ -133,13 +155,101 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
                 e
             );
             context = cb.build_osmesa(size)?;
+            let context = unsafe { context.treat_as_current() };
+            let display = glium::backend::glutin::headless::Headless::new(context)?;
+            print_context_info(&display);
+            (None, display)
         }
     };
 
-    let context = unsafe { context.treat_as_current() };
-    let display = glium::backend::glutin::headless::Headless::new(context)?;
-    print_context_info(&display);
-    Ok(display)
+    Ok(HeadlessGpu {
+        _event_loop: event_loop_opt,
+        display,
+    })
+}
+
+/// Keep a single headless GL context on a dedicated thread for the lifetime of the process.
+/// See <https://github.com/unlimitedbacon/stl-thumb-kde/issues/5#issuecomment-1870605872>.
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+struct HeadlessJob {
+    config: Config,
+    reply: mpsc::Sender<Result<image::DynamicImage, String>>,
+}
+
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+fn headless_worker_tx() -> &'static mpsc::SyncSender<HeadlessJob> {
+    static TX: OnceLock<mpsc::SyncSender<HeadlessJob>> = OnceLock::new();
+    TX.get_or_init(|| {
+        let (tx, rx) = mpsc::sync_channel::<HeadlessJob>(0);
+        thread::Builder::new()
+            .name("stl-thumb-headless".into())
+            .spawn(move || {
+                let mut gpu: Option<HeadlessGpu> = None;
+                while let Ok(HeadlessJob { config, reply }) = rx.recv() {
+                    let result: Result<image::DynamicImage, String> =
+                        panic::catch_unwind(panic::AssertUnwindSafe(|| -> Result<
+                            image::DynamicImage,
+                            String,
+                        > {
+                            if gpu.is_none() {
+                                let g = create_headless_gpu(&config).map_err(|e| e.to_string())?;
+                                gpu = Some(g);
+                            }
+                            let disp = &gpu.as_ref().unwrap().display;
+                            let mesh = Mesh::load(&config.model_filename, config.recalc_normals)
+                                .map_err(|e| e.to_string())?;
+                            let texture =
+                                glium::Texture2d::empty(disp, config.width, config.height).map_err(
+                                    |_| "failed to allocate GL color texture".to_string(),
+                                )?;
+                            let depthtexture = glium::texture::DepthTexture2d::empty(
+                                disp,
+                                config.width,
+                                config.height,
+                            )
+                            .map_err(|_| "failed to allocate GL depth texture".to_string())?;
+                            let mut framebuffer =
+                                glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+                                    disp,
+                                    &texture,
+                                    &depthtexture,
+                                )
+                                .map_err(|_| "failed to create framebuffer".to_string())?;
+                            Ok(render_pipeline(
+                                disp,
+                                &config,
+                                &mesh,
+                                &mut framebuffer,
+                                &texture,
+                            ))
+                        }))
+                        .unwrap_or_else(|_| {
+                            Err("panic in stl-thumb headless worker (try RUST_BACKTRACE=1)".into())
+                        });
+
+                    let _ = reply.send(result);
+                }
+            })
+            .expect("spawn stl-thumb headless worker");
+        tx
+    })
+}
+
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+fn headless_dispatch(config: Config) -> Result<image::DynamicImage, Box<dyn Error>> {
+    let (reply_tx, reply_rx) = mpsc::channel();
+    headless_worker_tx()
+        .send(HeadlessJob {
+            config,
+            reply: reply_tx,
+        })
+        .map_err(|_| -> Box<dyn Error> { "stl-thumb headless worker thread exited".into() })?;
+
+    match reply_rx.recv() {
+        Ok(Ok(img)) => Ok(img),
+        Ok(Err(s)) => Err(s.into()),
+        Err(_) => Err("headless worker disconnected".into()),
+    }
 }
 
 fn render_pipeline<F>(
@@ -323,49 +433,47 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn Error>> {
-    // Get geometry from model file
-    // =========================
-    let mesh = Mesh::load(&config.model_filename, config.recalc_normals)?;
-
-    // Create GL context
-    // =================
-    // 1. If not visible create a headless context.
-    // 2. If headless context creation fails, create a normal context with a hidden window.
-    let img: image::DynamicImage = match create_headless_display(config) {
-        Ok(display) => {
-            let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-            let depthtexture =
-                glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
-                    .unwrap();
-            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-                &display,
-                &texture,
-                &depthtexture,
-            )
-            .unwrap();
-            render_pipeline(&display, config, &mesh, &mut framebuffer, &texture)
-        }
+    // Linux/Windows: one shared headless worker (stl-thumb-kde #5). If it fails we must not call
+    // `create_normal_display` here: this process may already have a registered winit `EventLoop`
+    // on the worker thread; a second one panics ("Creating EventLoop multiple times").
+    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    match headless_dispatch(config.clone()) {
+        Ok(img) => Ok(img),
         Err(e) => {
             warn!(
-                "Unable to create headless GL context. Trying hidden window instead. Reason: {:?}",
+                "Shared headless render failed (no in-process hidden-window fallback): {}",
                 e
             );
-            let (display, _) = create_normal_display(config)?;
-            let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-            let depthtexture =
-                glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
-                    .unwrap();
-            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-                &display,
-                &texture,
-                &depthtexture,
-            )
-            .unwrap();
-            render_pipeline(&display, config, &mesh, &mut framebuffer, &texture)
+            Err(e)
         }
-    };
+    }
 
-    Ok(img)
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
+    {
+        // Get geometry from model file
+        // ==========================
+        let mesh = Mesh::load(&config.model_filename, config.recalc_normals)?;
+
+        // Create GL context (hidden window)
+        // =================
+        let (display, _) = create_normal_display(config)?;
+        let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
+        let depthtexture =
+            glium::texture::DepthTexture2d::empty(&display, config.width, config.height).unwrap();
+        let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
+            &display,
+            &texture,
+            &depthtexture,
+        )
+        .unwrap();
+        Ok(render_pipeline(
+            &display,
+            config,
+            &mesh,
+            &mut framebuffer,
+            &texture,
+        ))
+    }
 }
 
 pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
@@ -478,32 +586,28 @@ pub unsafe extern "C" fn render_to_buffer(
         model_filename: model_filename_str.to_string(),
         width,
         height,
+        // Default Config uses a fully transparent background. Dolphin/KIO thumbnails often clip
+        // or mishandle alpha, so thumbnails can look invisible even when rendering succeeded.
         ..Default::default()
     };
 
-    // Render
-
-    // Run renderer in seperate thread so OpenGL problems do not crash caller
-    let render_thread = thread::spawn(move || render_to_image(&config).unwrap());
-
-    let img = match render_thread.join() {
-        Ok(s) => s,
-        Err(e) => {
-            error!("Application error: {:?}", e);
-            return false;
+    // Render (shared headless worker on Linux/Windows; avoids one EventLoop per thumbnail)
+    match render_to_image(&config) {
+        Ok(img) => {
+            match img.as_rgba8() {
+                Some(s) => buf.copy_from_slice(s),
+                None => {
+                    error!("Unable to get image");
+                    return false;
+                }
+            }
+            true
         }
-    };
-
-    // Copy image to output buffer
-    match img.as_rgba8() {
-        Some(s) => buf.copy_from_slice(s),
-        None => {
-            error!("Unable to get image");
-            return false;
+        Err(e) => {
+            error!("Render failed: {}", e);
+            false
         }
     }
-
-    true
 }
 
 // TODO: Move tests to their own file
@@ -561,6 +665,30 @@ mod tests {
         let size = fs::metadata(img_filename).expect("No file created").len();
 
         assert_ne!(0, size);
+    }
+
+    /// KDE keeps the thumbnail plugin loaded and calls `render_to_buffer` many times; each call
+    /// must not create a new winit event loop (see stl-thumb-kde #5).
+    #[test]
+    fn consecutive_c_api_renders_same_process() {
+        use std::ffi::CString;
+
+        let path = CString::new("test_data/cube.stl").expect("path");
+        let sz = 64_u32;
+        let buflen = (sz * sz * 4) as usize;
+        let mut a = vec![0u8; buflen];
+        let mut b = vec![0u8; buflen];
+        unsafe {
+            assert!(
+                render_to_buffer(a.as_mut_ptr(), sz, sz, path.as_ptr()),
+                "first render_to_buffer failed"
+            );
+            assert!(
+                render_to_buffer(b.as_mut_ptr(), sz, sz, path.as_ptr()),
+                "second render_to_buffer failed (winit EventLoop regression)"
+            );
+        }
+        assert_eq!(a, b, "identical model and size must yield identical RGBA");
     }
 
     #[test]
