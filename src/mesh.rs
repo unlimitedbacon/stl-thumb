@@ -9,6 +9,9 @@ use std::io::BufReader;
 use std::io::{Cursor, Read, Seek};
 use std::{fmt, io};
 
+use quick_xml::events::Event;
+use quick_xml::Reader;
+
 use self::stl_io::{Triangle, Vector};
 
 use self::ahash::AHashMap;
@@ -131,7 +134,7 @@ impl Mesh {
                     {
                         "obj" => Mesh::from_obj(model_file, recalc_normals)?,
                         "stl" => Mesh::from_stl(model_file, recalc_normals)?,
-                        "3mf" => Mesh::from_3mf(model_file, recalc_normals)?,
+                        "3mf" => Mesh::from_3mf_raw(model_file, recalc_normals)?,
                         _ => unimplemented!("Format not supported"),
                     },
                 )
@@ -182,6 +185,120 @@ impl Mesh {
         }
 
         Ok(result.unwrap())
+    }
+
+    // Fallback 3MF parser using quick-xml event reader.
+    // The threemf crate fails on files with repeated <metadata> elements
+    // (e.g. BambuStudio exports). This parser extracts only vertex/triangle
+    // data and tolerates any XML structure.
+    pub fn from_3mf_raw<R>(model_file: R, _recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
+    where
+        R: Read + Seek,
+    {
+        let mut zip = zip::ZipArchive::new(model_file)?;
+        let mut result: Option<Mesh> = None;
+
+        for i in 0..zip.len() {
+            let file = zip.by_index(i)?;
+            if !file.name().ends_with(".model") {
+                continue;
+            }
+
+            let mut reader = Reader::from_reader(BufReader::new(file));
+            let mut buf = Vec::new();
+            let mut vertices: Vec<stl_io::Vertex> = Vec::new();
+            let mut in_mesh = false;
+            let mut in_vertices = false;
+            let mut in_triangles = false;
+
+            loop {
+                match reader.read_event_into(&mut buf) {
+                    Ok(Event::Start(ref e) | Event::Empty(ref e)) => {
+                        let local = e.local_name();
+                        match local.as_ref() {
+                            b"mesh" => {
+                                in_mesh = true;
+                                vertices.clear();
+                            }
+                            b"vertices" if in_mesh => in_vertices = true,
+                            b"triangles" if in_mesh => in_triangles = true,
+                            b"vertex" if in_vertices => {
+                                let mut x = 0f32;
+                                let mut y = 0f32;
+                                let mut z = 0f32;
+                                for attr in e.attributes().flatten() {
+                                    match attr.key.local_name().as_ref() {
+                                        b"x" => {
+                                            x = std::str::from_utf8(&attr.value)?.parse()?
+                                        }
+                                        b"y" => {
+                                            y = std::str::from_utf8(&attr.value)?.parse()?
+                                        }
+                                        b"z" => {
+                                            z = std::str::from_utf8(&attr.value)?.parse()?
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                vertices.push(stl_io::Vertex::new([x, y, z]));
+                            }
+                            b"triangle" if in_triangles => {
+                                let mut v1 = 0usize;
+                                let mut v2 = 0usize;
+                                let mut v3 = 0usize;
+                                for attr in e.attributes().flatten() {
+                                    match attr.key.local_name().as_ref() {
+                                        b"v1" => {
+                                            v1 = std::str::from_utf8(&attr.value)?.parse()?
+                                        }
+                                        b"v2" => {
+                                            v2 = std::str::from_utf8(&attr.value)?.parse()?
+                                        }
+                                        b"v3" => {
+                                            v3 = std::str::from_utf8(&attr.value)?.parse()?
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                if v1 < vertices.len()
+                                    && v2 < vertices.len()
+                                    && v3 < vertices.len()
+                                {
+                                    let tri = stl_io::Triangle {
+                                        normal: stl_io::Normal::new([1f32, 0f32, 0f32]),
+                                        vertices: [vertices[v1], vertices[v2], vertices[v3]],
+                                    };
+                                    result
+                                        .get_or_insert_with(|| Mesh {
+                                            vertices: Vec::new(),
+                                            normals: Vec::new(),
+                                            indices: Vec::new(),
+                                            bounds: BoundingBox::new(&tri.vertices[0]),
+                                            model_had_normals: false,
+                                        })
+                                        .process_tri(&tri, true);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    Ok(Event::End(ref e)) => {
+                        match e.local_name().as_ref() {
+                            b"mesh" => in_mesh = false,
+                            b"vertices" => in_vertices = false,
+                            b"triangles" => in_triangles = false,
+                            _ => {}
+                        }
+                    }
+                    Ok(Event::Eof) => break,
+                    Err(_) => break,
+                    _ => {}
+                }
+                buf.clear();
+            }
+        }
+
+        result.ok_or_else(|| "No mesh data found in 3MF file".into())
     }
 
     pub fn from_stl<R>(mut model_file: R, recalc_normals: bool) -> Result<Mesh, Box<dyn Error>>
