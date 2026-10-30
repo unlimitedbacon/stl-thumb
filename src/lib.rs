@@ -136,7 +136,7 @@ fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, B
         }
     };
 
-    let context = unsafe { context.treat_as_current() };
+    let context = unsafe { context.make_current() }.map_err(|(_, e)| e)?;
     let display = glium::backend::glutin::headless::Headless::new(context)?;
     print_context_info(&display);
     Ok(display)
