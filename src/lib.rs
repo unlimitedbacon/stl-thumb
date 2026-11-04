@@ -15,13 +15,15 @@ use cgmath::EuclideanSpace;
 use config::{AAMethod, Config};
 use glium::backend::Facade;
 use glium::glutin::dpi::PhysicalSize;
-use glium::glutin::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
+use glium::glutin::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget};
 use glium::{glutin, CapabilitiesSource, Surface};
 use image::{ImageEncoder, ImageFormat};
 use libc::c_char;
 use mesh::Mesh;
 use std::error::Error;
 use std::ffi::CStr;
+use std::panic::AssertUnwindSafe;
+use std::sync::{mpsc, OnceLock};
 use std::{io, panic, slice, thread, time};
 
 #[cfg(target_os = "linux")]
@@ -56,90 +58,214 @@ fn print_context_info(display: &glium::backend::Context) {
     );
 }
 
-fn create_normal_display(
-    config: &Config,
-) -> Result<(glium::Display, EventLoop<()>), Box<dyn Error>> {
-    let event_loop = EventLoop::new();
+fn window_builder(config: &Config) -> glutin::window::WindowBuilder {
     let window_dim = PhysicalSize::new(config.width, config.height);
-    let window = glutin::window::WindowBuilder::new()
+    glutin::window::WindowBuilder::new()
         .with_title("stl-thumb")
         .with_inner_size(window_dim)
         .with_min_inner_size(window_dim)
         .with_max_inner_size(window_dim)
-        .with_visible(config.visible);
+        .with_visible(config.visible)
+}
+
+fn create_window_display(
+    config: &Config,
+    event_loop: &EventLoopWindowTarget<()>,
+) -> Result<glium::Display, Box<dyn Error>> {
     let cb = glutin::ContextBuilder::new().with_depth_buffer(24);
     //.with_multisampling(8);
     //.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGlEs, (2, 0)));
-    let display = glium::Display::new(window, cb, &event_loop)?;
-    print_context_info(&display);
-    Ok((display, event_loop))
-}
-
-#[cfg(target_os = "windows")]
-fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
-    use glium::glutin::platform::windows::EventLoopBuilderExtWindows;
-
-    let event_loop: EventLoop<()> = EventLoopBuilder::new().with_any_thread(true).build();
-    let size = PhysicalSize::new(config.width, config.height);
-    let cb = glutin::ContextBuilder::new();
-    let context = cb.build_headless(&event_loop, size)?;
-
-    let context = unsafe { context.treat_as_current() };
-    let display = glium::backend::glutin::headless::Headless::new(context)?;
+    let display = glium::Display::new(window_builder(config), cb, event_loop)?;
     print_context_info(&display);
     Ok(display)
 }
 
+/// An OpenGL context suitable for rendering into an off-screen framebuffer.
+enum OffscreenDisplay {
+    Headless(glium::HeadlessRenderer),
+    /// Fallback: a normal context attached to a hidden window.
+    Window(glium::Display),
+}
+
+/// Creates the process-wide event loop, or returns `None` if there is no display server.
+///
+/// winit only allows one `EventLoop` per process, so this must be called at most once.
+/// See `render_service()`.
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+fn create_event_loop() -> Option<EventLoop<()>> {
+    #[cfg(target_os = "linux")]
+    use glium::glutin::platform::unix::EventLoopBuilderExtUnix;
+    #[cfg(target_os = "windows")]
+    use glium::glutin::platform::windows::EventLoopBuilderExtWindows;
+
+    // If there is no X server or Wayland, creating the event loop panics.
+    // TODO: Submit PR upstream to stop panicing
+    match panic::catch_unwind(|| EventLoopBuilder::new().with_any_thread(true).build()) {
+        Ok(event_loop) => Some(event_loop),
+        Err(e) => {
+            warn!(
+                "Unable to create event loop (no Wayland or X server?). Reason: {:?}",
+                e
+            );
+            None
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn create_offscreen_display(
+    config: &Config,
+    event_loop: Option<&EventLoop<()>>,
+) -> Result<OffscreenDisplay, Box<dyn Error>> {
+    let event_loop = event_loop.ok_or("Unable to create an event loop")?;
+    let size = PhysicalSize::new(config.width, config.height);
+
+    match glutin::ContextBuilder::new().build_headless(event_loop, size) {
+        Ok(context) => {
+            let context = unsafe { context.treat_as_current() };
+            let display = glium::backend::glutin::headless::Headless::new(context)?;
+            print_context_info(&display);
+            Ok(OffscreenDisplay::Headless(display))
+        }
+        Err(e) => {
+            warn!(
+                "Unable to create headless GL context. Trying hidden window instead. Reason: {:?}",
+                e
+            );
+            Ok(OffscreenDisplay::Window(create_window_display(
+                config, event_loop,
+            )?))
+        }
+    }
+}
+
 #[cfg(target_os = "linux")]
-fn create_headless_display(config: &Config) -> Result<glium::HeadlessRenderer, Box<dyn Error>> {
-    use glium::glutin::platform::unix::{EventLoopBuilderExtUnix, HeadlessContextExt};
+fn create_offscreen_display(
+    config: &Config,
+    event_loop: Option<&EventLoop<()>>,
+) -> Result<OffscreenDisplay, Box<dyn Error>> {
+    use glium::glutin::platform::unix::HeadlessContextExt;
 
     let size = PhysicalSize::new(config.width, config.height);
     let cb = glutin::ContextBuilder::new();
-    let context: glium::glutin::Context<glium::glutin::NotCurrent>;
 
     // Linux requires an elaborate chain of attempts and fallbacks to find the ideal type of opengl context.
-
-    // If there is no X server or Wayland, creating the event loop will fail first.
-    // If this happens we catch the panic and fall back to osmesa software rendering, which doesn't require an event loop.
-    // TODO: Submit PR upstream to stop panicing
-    let event_loop_result: Result<EventLoop<()>, _> =
-        panic::catch_unwind(|| EventLoopBuilder::new().with_any_thread(true).build());
-
-    match event_loop_result {
-        Ok(event_loop) => {
-            context = {
-                // Try surfaceless, headless, and osmesa in that order
-                // This is the procedure recommended in
-                // https://github.com/rust-windowing/glutin/blob/bab33a84dfb094ff65c059400bed7993434638e2/glutin_examples/examples/headless.rs
-                match cb.clone().build_surfaceless(&event_loop) {
-                    Ok(c) => c,
+    // Try surfaceless, headless, osmesa and finally a hidden window, in that order.
+    // This is the procedure recommended in
+    // https://github.com/rust-windowing/glutin/blob/bab33a84dfb094ff65c059400bed7993434638e2/glutin_examples/examples/headless.rs
+    let context = match event_loop {
+        Some(event_loop) => match cb.clone().build_surfaceless(event_loop) {
+            Ok(c) => Some(c),
+            Err(e) => {
+                warn!("Unable to create surfaceless GL context. Trying headless instead. Reason: {:?}", e);
+                match cb.clone().build_headless(event_loop, size) {
+                    Ok(c) => Some(c),
                     Err(e) => {
-                        warn!("Unable to create surfaceless GL context. Trying headless instead. Reason: {:?}", e);
-                        match cb.clone().build_headless(&event_loop, size) {
-                            Ok(c) => c,
+                        warn!("Unable to create headless GL context. Trying osmesa software renderer instead. Reason: {:?}", e);
+                        match cb.build_osmesa(size) {
+                            Ok(c) => Some(c),
                             Err(e) => {
-                                warn!("Unable to create headless GL context. Trying osmesa software renderer instead. Reason: {:?}", e);
-                                cb.build_osmesa(size)?
+                                warn!("Unable to create osmesa GL context. Trying hidden window instead. Reason: {:?}", e);
+                                None
                             }
                         }
                     }
                 }
-            };
-        }
-        Err(e) => {
-            warn!(
-                "No Wayland or X server. Falling back to osmesa software rendering. Reason {:?}",
-                e
-            );
-            context = cb.build_osmesa(size)?;
+            }
+        },
+        None => {
+            warn!("No Wayland or X server. Falling back to osmesa software rendering.");
+            Some(cb.build_osmesa(size).map_err(|e| {
+                format!(
+                    "No Wayland or X server available and osmesa software rendering failed ({:?}). \
+                     Try running stl-thumb with xvfb-run.",
+                    e
+                )
+            })?)
         }
     };
 
-    let context = unsafe { context.treat_as_current() };
-    let display = glium::backend::glutin::headless::Headless::new(context)?;
-    print_context_info(&display);
-    Ok(display)
+    match context {
+        Some(context) => {
+            let context = unsafe { context.treat_as_current() };
+            let display = glium::backend::glutin::headless::Headless::new(context)?;
+            print_context_info(&display);
+            Ok(OffscreenDisplay::Headless(display))
+        }
+        // `context` is only `None` when an event loop exists
+        None => Ok(OffscreenDisplay::Window(create_window_display(
+            config,
+            event_loop.unwrap(),
+        )?)),
+    }
+}
+
+type RenderReply = Result<image::DynamicImage, String>;
+type RenderJob = (Config, Mesh, mpsc::Sender<RenderReply>);
+
+/// Returns a handle to the background thread that performs all off-screen rendering.
+///
+/// winit panics if more than one `EventLoop` is created in a process, but library users such as
+/// thumbnail plugins call `render_to_buffer()` many times from one long-running process.
+/// So a single thread creates the event loop once, keeps it for the life of the process, and
+/// renders every image.
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+fn render_service() -> &'static mpsc::Sender<RenderJob> {
+    static SERVICE: OnceLock<mpsc::Sender<RenderJob>> = OnceLock::new();
+    SERVICE.get_or_init(|| {
+        let (tx, rx) = mpsc::channel::<RenderJob>();
+        thread::Builder::new()
+            .name("stl-thumb-render".to_string())
+            .spawn(move || {
+                let event_loop = create_event_loop();
+                for (config, mesh, reply) in rx {
+                    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+                        render_offscreen(&config, &mesh, event_loop.as_ref())
+                            .map_err(|e| e.to_string())
+                    }))
+                    .unwrap_or_else(|p| Err(format!("Renderer panicked: {}", panic_message(&p))));
+                    // The caller may have gone away. Nothing to do about it.
+                    let _ = reply.send(result);
+                }
+            })
+            .expect("Unable to spawn render thread");
+        tx
+    })
+}
+
+fn panic_message(payload: &Box<dyn std::any::Any + Send>) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        s.to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "unknown panic".to_string()
+    }
+}
+
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+fn render_offscreen(
+    config: &Config,
+    mesh: &Mesh,
+    event_loop: Option<&EventLoop<()>>,
+) -> Result<image::DynamicImage, Box<dyn Error>> {
+    Ok(match create_offscreen_display(config, event_loop)? {
+        OffscreenDisplay::Headless(display) => render_with_display(&display, config, mesh),
+        OffscreenDisplay::Window(display) => render_with_display(&display, config, mesh),
+    })
+}
+
+fn render_with_display<F>(display: &F, config: &Config, mesh: &Mesh) -> image::DynamicImage
+where
+    F: Facade,
+{
+    let texture = glium::Texture2d::empty(display, config.width, config.height).unwrap();
+    let depthtexture =
+        glium::texture::DepthTexture2d::empty(display, config.width, config.height).unwrap();
+    let mut framebuffer =
+        glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(display, &texture, &depthtexture)
+            .unwrap();
+    render_pipeline(display, config, mesh, &mut framebuffer, &texture)
 }
 
 fn render_pipeline<F>(
@@ -269,7 +395,8 @@ pub fn render_to_window(config: Config) -> Result<(), Box<dyn Error>> {
 
     // Create GL context
     // =================
-    let (display, event_loop) = create_normal_display(&config)?;
+    let event_loop = EventLoop::new();
+    let display = create_window_display(&config, &event_loop)?;
 
     let sleep_time = time::Duration::from_millis(10);
 
@@ -327,43 +454,15 @@ pub fn render_to_image(config: &Config) -> Result<image::DynamicImage, Box<dyn E
     // =========================
     let mesh = Mesh::load(&config.model_filename, config.recalc_normals)?;
 
-    // Create GL context
-    // =================
-    // 1. If not visible create a headless context.
-    // 2. If headless context creation fails, create a normal context with a hidden window.
-    let img: image::DynamicImage = match create_headless_display(config) {
-        Ok(display) => {
-            let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-            let depthtexture =
-                glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
-                    .unwrap();
-            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-                &display,
-                &texture,
-                &depthtexture,
-            )
-            .unwrap();
-            render_pipeline(&display, config, &mesh, &mut framebuffer, &texture)
-        }
-        Err(e) => {
-            warn!(
-                "Unable to create headless GL context. Trying hidden window instead. Reason: {:?}",
-                e
-            );
-            let (display, _) = create_normal_display(config)?;
-            let texture = glium::Texture2d::empty(&display, config.width, config.height).unwrap();
-            let depthtexture =
-                glium::texture::DepthTexture2d::empty(&display, config.width, config.height)
-                    .unwrap();
-            let mut framebuffer = glium::framebuffer::SimpleFrameBuffer::with_depth_buffer(
-                &display,
-                &texture,
-                &depthtexture,
-            )
-            .unwrap();
-            render_pipeline(&display, config, &mesh, &mut framebuffer, &texture)
-        }
-    };
+    // Render on the shared render thread, which owns the process-wide event loop
+    // =========================
+    let (reply_tx, reply_rx) = mpsc::channel();
+    render_service()
+        .send((config.clone(), mesh, reply_tx))
+        .map_err(|_| "Render thread is not running")?;
+    let img = reply_rx
+        .recv()
+        .map_err(|_| "Render thread stopped unexpectedly")??;
 
     Ok(img)
 }
@@ -402,6 +501,9 @@ pub fn render_to_file(config: &Config) -> Result<(), Box<dyn Error>> {
                 img.color().into(),
             )?;
         }
+        // JPEG has no alpha channel, so the image crate refuses to encode RGBA
+        ImageFormat::Jpeg => image::DynamicImage::ImageRgb8(img.to_rgb8())
+            .write_to(&mut cursor, ImageFormat::Jpeg)?,
         _ => img.write_to(&mut cursor, config.format.to_owned())?,
     }
     //img.write_to(&mut cursor, config.format.to_owned())?;
